@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>班小记 (支持拖动排座版)</title>
+  <link rel="stylesheet" href="src/css/style.css">
+  <!-- 离线本地 SheetJS 库 -->
+  <script src="src/js/xlsx.full.min.js"></script>
+  <!-- 离线初始演示数据 -->
+  <script src="src/js/mock_data.js"></script>
+</head>
+<body>
+
+  <!-- ================= 顶部导航栏 ================= -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo" title="班小记">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            <line x1="12" y1="6" x2="16" y2="6"></line>
+            <line x1="12" y1="10" x2="16" y2="10"></line>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <h1 class="brand-name">班小记</h1>
+        </div>
+      </div>
+
+      <!-- 班级切换器 -->
+      <div class="class-selector-box">
+        <label for="classSelect">班级:</label>
+        <select id="classSelect" class="class-dropdown" onchange="app.switchClass(this.value)"></select>
+        <span id="classStudentCountBadge" class="class-student-count-tag">0人</span>
+        <button class="btn btn-subtle btn-sm" onclick="app.openModal('classManageModal')" title="班级管理">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          管理班级
+        </button>
+      </div>
+
+      <!-- 右侧全局操作 -->
+      <div class="header-actions">
+        <button class="btn btn-outline" onclick="app.openModal('studentManageModal')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          花名册
+        </button>
+        <button class="btn btn-outline" onclick="app.openModal('excelModal')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+          Excel 导入导出
+        </button>
+        <button class="btn btn-outline" onclick="app.openModal('backupModal')" title="备份与恢复本地数据">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline></svg>
+          备份
+        </button>
+        <button class="btn btn-subtle" onclick="app.openModal('helpModal')" title="使用手册与快捷键">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          指南
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 主工作区 ================= -->
+  <main class="app-body">
+    
+    <!-- 任务信息与状态顶栏 (紧凑扁平、小屏笔记本高利用率设计、总人数放任务标题右侧) -->
+    <section class="task-banner-card">
+      <div class="task-banner-row">
+        
+        <!-- 左侧主体：当前任务信息 + 右侧紧跟的核心数据统计板 (总人数放任务标题右侧) -->
+        <div class="task-banner-left-wrap">
+          <!-- 当前正在检查的任务名称与分类 -->
+          <div class="task-current-info">
+            <span id="taskCategoryBadge" class="task-badge-category">背书</span>
+            <div class="task-title-group">
+              <span id="currentTaskName" class="task-name-text">正在加载任务...</span>
+              <span id="currentTaskTime" class="task-create-time">-</span>
+            </div>
+          </div>
+
+          <!-- 任务标题右侧：核心数据统计药丸 (总人数、已完成、待完成、完成率) -->
+          <div class="task-progress-stats-right">
+            <div class="stat-pill stat-total" title="当前班级总人数">
+              <span class="stat-label">总人数</span>
+              <span id="statTotalStudents" class="stat-val">0</span>
+            </div>
+            <div class="stat-pill stat-done" title="已完成达标人数">
+              <span class="stat-label">已完成</span>
+              <span id="statCompletedStudents" class="stat-val">0</span>
+            </div>
+            <div class="stat-pill stat-pending" title="待完成人数">
+              <span class="stat-label">待完成</span>
+              <span id="statPendingStudents" class="stat-val">0</span>
+            </div>
+            <div class="stat-pill stat-rate" title="整体完成达标率">
+              <span class="stat-label">完成率</span>
+              <span id="statRatePercent" class="stat-val">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：课堂高效互动与批量操作工具 -->
+        <div class="task-banner-tools">
+          <button class="btn btn-amber btn-sm" onclick="app.openLotteryModal()" title="随机抽取学生检查背诵或作业">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            🎲 随机抽查
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="app.markAllCompleted()" title="将全班一键标记为已完成">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            全员完成
+          </button>
+          <button class="btn btn-subtle btn-sm" onclick="app.resetCurrentTask()" title="重置当前任务所有学生状态为待完成">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+            重置
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 紧凑微型进度条 -->
+      <div class="progress-bar-container-compact">
+        <div id="taskProgressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+      </div>
+    </section>
+
+    <!-- ================= 核心双栏整合工作区 (左侧任务列表 + 右侧座位图打卡) ================= -->
+    <div class="workspace-split-layout">
+      
+      <!-- ---------------- 左栏：任务列表管理 (免弹窗、直观切换与新建) ---------------- -->
+      <aside class="task-sidebar-card">
+        <div class="task-sidebar-header">
+          <div class="sidebar-title">
+            <span>📋 班级任务列表</span>
+            <span id="sidebarTaskCountBadge" class="sidebar-count-badge">0个</span>
+          </div>
+        </div>
+
+        <!-- 极速新建任务面板 -->
+        <form class="sidebar-add-task-form" onsubmit="event.preventDefault(); app.createNewTask();">
+          <div class="add-task-input-row">
+            <select id="newTaskCategory" class="sidebar-select-category" title="任务类型">
+              <option value="背书">背书</option>
+              <option value="作业">作业</option>
+              <option value="听写">听写</option>
+              <option value="默写">默写</option>
+              <option value="打卡">打卡</option>
+              <option value="订正">订正</option>
+            </select>
+            <input type="text" id="newTaskInput" class="input-text sidebar-task-input" placeholder="输入新任务按回车发布..." autocomplete="off" />
+            <button type="submit" class="sidebar-create-btn" title="发布新任务">
+              <span>➕ 添加</span>
+            </button>
+          </div>
+          <div class="sidebar-quick-tags">
+            <span class="quick-chip" onclick="app.quickFillTask('语文课文当堂背诵', '背书')">📖背诵</span>
+            <span class="quick-chip" onclick="app.quickFillTask('英语重点单词听写', '听写')">🔤听写</span>
+            <span class="quick-chip" onclick="app.quickFillTask('数学课本课后作业', '作业')">📐作业</span>
+            <span class="quick-chip" onclick="app.quickFillTask('错题订正过关检查', '订正')">✍️订正</span>
+          </div>
+        </form>
+
+        <!-- 滚动任务卡片列表 -->
+        <div id="sidebarTaskList" class="task-cards-scroll-list">
+          <!-- 动态注入任务卡片 -->
+        </div>
+      </aside>
+
+      <!-- ---------------- 右栏：班级座位图 (待完成/全班打卡主区) ---------------- -->
+      <section class="seating-main-card">
+        <div class="seating-card-header">
+          <div class="seating-header-title">
+            <span>💺 班级座位图</span>
+            <div class="seating-legend-inline">
+              <div class="legend-item">
+                <span class="legend-box pending"></span>
+                <span>待完成 (<span id="legendPendingCount">0</span>)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-box completed"></span>
+                <span>已达标 (<span id="legendDoneCount">0</span>)</span>
+              </div>
+              <span class="drag-swap-badge" title="鼠标按住任意学生座位拖动到另一座位即可一秒调换位置">🔄 支持拖动换座</span>
+            </div>
+          </div>
+
+          <div class="seating-header-controls">
+            <!-- 座位图标形状切换器 (花瓣、课桌、气球、星星) -->
+            <div class="shape-selector-box" title="切换学生座位图标显示样式">
+              <span class="shape-picker-label">图标:</span>
+              <select id="seatShapeSelect" class="shape-dropdown" onchange="app.setSeatShape(this.value)">
+                <option value="flower" selected>🌸 花瓣 (默认)</option>
+                <option value="desk">🪑 课桌</option>
+                <option value="balloon">🎈 气球</option>
+                <option value="star">⭐ 星星</option>
+              </select>
+            </div>
+
+            <!-- 快速筛选学生 -->
+            <div class="search-input-box">
+              <svg class="icon search-icon-pos" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="filterKeyword" placeholder="姓名/学号..." oninput="app.handleFilter(this.value)" />
+            </div>
+
+            <!-- 教师视角 vs 学生视角 切换按钮 -->
+            <button id="perspectiveToggleBtn" class="btn btn-outline btn-sm" onclick="app.togglePerspective()" title="切换教师视角(俯瞰)或学生视角(面对讲台)">
+              <span id="perspectiveIcon">👨‍🏫</span> <span id="perspectiveLabel">教师视角</span>
+            </button>
+            
+            <!-- 排座设置按钮 -->
+            <button class="btn btn-outline btn-sm" onclick="app.openModal('seatConfigModal')" title="自定义班级座位行列数与过道">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              排座设置
+            </button>
+
+            <button id="densityToggleBtn" class="btn btn-subtle btn-sm" onclick="app.toggleDensity()" title="切换紧凑/舒适模式 (大班200+人建议紧凑)">
+              <span id="densityLabel">紧凑模式</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 讲台与黑板标志 (支持视角联动) -->
+        <div id="classroomPodiumBar" class="classroom-podium-bar">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h20v14H2z"></path><path d="M7 21h10"></path><path d="M12 17v4"></path></svg>
+          <span id="classroomPodiumText">黑 板 · 讲 台 (教师视角)</span>
+        </div>
+
+        <!-- 座位网格：直接展示大名字与学号，点击直接打卡 -->
+        <div class="seating-grid-scroll-wrap">
+          <div id="seatingGridContainer" class="seating-grid">
+            <!-- 动态注入座位卡片 -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ================= 模态弹窗 1：随机抽查点名 (大转盘/抽卡) ================= -->
+  <div id="lotteryModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+          课堂随机点名抽查 (抽背书/查作业)
+        </h3>
+        <button class="modal-close-btn" onclick="app.closeModal('lotteryModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="lottery-box">
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+            抽取范围：
+            <label style="margin-right: 1rem; cursor: pointer;">
+              <input type="radio" name="lotteryScope" value="pending" checked onchange="app.lotteryScope = 'pending'"> 仅待完成学生 (<span id="lotteryPendingCount">0</span>人)
+            </label>
+            <label style="cursor: pointer;">
+              <input type="radio" name="lotteryScope" value="all" onchange="app.lotteryScope = 'all'"> 全班学生 (<span id="lotteryAllCount">0</span>人)
+            </label>
+          </div>
+
+          <div id="lotteryCardBig" class="lottery-student-card-big">
+            <div id="lotteryNameBig" class="lottery-student-name-big">准备就绪</div>
+            <div id="lotterySubInfoBig" class="lottery-student-id-big">点击下方开始抽签</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: center; gap: 1rem;">
+        <button id="lotteryStartBtn" class="btn btn-amber btn-lg" onclick="app.startLottery()">
+          🎲 开始抽取
+        </button>
+        <button id="lotteryPassBtn" class="btn btn-primary btn-lg" style="display: none;" onclick="app.markLotteryStudentPassed()">
+          ✅ 检查通过！标记为已完成
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 2：学生花名册管理 ================= -->
+  <div id="studentManageModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          班级学生花名册 (<span id="studentModalClassTitle"></span>)
+        </h3>
+        <button class="modal-close-btn" onclick="app.closeModal('studentManageModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary btn-sm" onclick="app.openModal('addStudentSingleModal')">
+              ➕ 添加单个学生
+            </button>
+            <button class="btn btn-outline btn-sm" onclick="app.openModal('batchAddModal')">
+              📋 批量导入名单(支持学号)
+            </button>
+          </div>
+          <div class="search-input-box">
+            <svg class="icon search-icon-pos" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" placeholder="搜索花名册..." oninput="app.filterStudentModal(this.value)" />
+          </div>
+        </div>
+
+        <div style="overflow-x: auto; max-height: 440px;">
+          <table class="modern-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;">学号</th>
+                <th>姓名</th>
+                <th>性别</th>
+                <th>小组/职务</th>
+                <th>家长联系电话</th>
+                <th>备注</th>
+                <th>累计达标</th>
+                <th style="width: 120px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="studentModalTableBody">
+              <!-- 动态填入花名册 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('studentManageModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 3：任务历史记录 ================= -->
+  <div id="historyModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          历史任务记录与切换
+        </h3>
+        <button class="modal-close-btn" onclick="app.closeModal('historyModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-tasks-grid" id="historyTasksGrid">
+          <!-- 动态注入历史任务卡片 -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('historyModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 4：Excel 导入与导出中心 ================= -->
+  <div id="excelModal" class="modal-overlay">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
+          Excel 导入与导出中心
+        </h3>
+        <button class="modal-close-btn" onclick="app.closeModal('excelModal')">×</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 1.25rem;">
+        
+        <!-- 导出板块 -->
+        <div style="background: var(--bg-subtle); padding: 1.15rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+          <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+            📤 数据导出至 Excel
+          </h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem;">
+            支持将当前班级的任务详情、达标对错明细表、排行榜导出，或将所有班级汇总导出为一个工作簿（内含多个Sheet）。
+          </p>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="app.exportCurrentClassDetailExcel()">
+              📊 导出当前班级详细报表 (含排行榜与明细)
+            </button>
+            <button class="btn btn-outline" onclick="app.exportAllClassesMultiSheetExcel()">
+              📑 导出全部班级汇总 Excel (多Sheet)
+            </button>
+            <button class="btn btn-subtle" onclick="app.downloadStandardTemplate()">
+              ⬇️ 下载学生导入标准模板.xlsx
+            </button>
+          </div>
+        </div>
+
+        <!-- 导入板块 -->
+        <div>
+          <h4 style="font-size: 0.95rem; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+            📥 从 Excel 文件批量导入名单 (含学号)
+          </h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.65rem;">
+            系统自动识别 Excel 表头中的<strong>「学号」</strong>与<strong>「姓名」</strong>列（支持单Sheet或多Sheet多班级），导入后自动按学号排成 8 列座位表。
+          </p>
+
+          <div class="dropzone-box" onclick="document.getElementById('excelFileInput').click()">
+            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="app.handleExcelFileSelect(this.files[0])" />
+            <svg class="icon" style="width: 44px; height: 44px; stroke: var(--primary-600); margin-bottom: 0.4rem;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-main);">点击选择或将 Excel 文件拖拽到此处</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">支持 .xlsx、.xls 格式，自动识别姓名、学号、性别等</div>
+          </div>
+
+          <div style="margin-top: 0.65rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-subtle btn-sm" onclick="app.closeModal('excelModal'); app.openModal('batchAddModal');">
+              📋 没有Excel文件？点击直接粘贴学号姓名文本导入
+            </button>
+          </div>
+
+          <!-- 扫描到多 Sheet 预览 -->
+          <div id="excelSheetsScanResult" style="display: none; margin-top: 0.85rem;">
+            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.4rem;">解析到以下工作表：</div>
+            <div id="sheetsListContainer" class="sheets-preview-list"></div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.65rem; margin-top: 0.85rem;">
+              <button class="btn btn-outline" onclick="app.importSelectedSheetsToCurrentClass()">导入到当前班级</button>
+              <button class="btn btn-primary" onclick="app.importAllSheetsAsNewClasses()">将各Sheet作为独立班级批量新建导入</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('excelModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 5：班级管理 ================= -->
+  <div id="classManageModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>班级管理</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('classManageModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.15rem;">
+          <input type="text" id="newClassNameInput" class="input-text" placeholder="输入新班级名称（如：七年级3班）" />
+          <button class="btn btn-primary" onclick="app.createNewClass()">➕ 新建班级</button>
+        </div>
+
+        <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.4rem;">已有班级列表：</div>
+        <div id="classListContainer" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 250px; overflow-y: auto;">
+          <!-- 动态渲染班级列表 -->
+        </div>
+
+        <div style="margin-top: 1.25rem; padding: 0.85rem; background: var(--accent-rose-light); border-radius: var(--radius-md); border: 1px solid #fecaca;">
+          <div style="font-weight: 700; color: #991b1b; font-size: 0.85rem; margin-bottom: 0.25rem;">⚠️ 清空当前班级记录</div>
+          <div style="font-size: 0.75rem; color: #7f1d1d; margin-bottom: 0.65rem;">重置将清空当前班级所有任务记录和完成历史，保留学生名单。</div>
+          <button class="btn btn-danger-outline btn-sm" onclick="app.resetClassAllTasksRecord()">
+            重置当前班级所有任务记录
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('classManageModal')">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 6：座位排布设置 ================= -->
+  <div id="seatConfigModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>班级座位排布配置</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('seatConfigModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">座位总行数:</label>
+            <input type="number" id="seatRowsInput" class="input-text" min="1" max="30" value="6" />
+          </div>
+          <div>
+            <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">座位总列数:</label>
+            <input type="number" id="seatColsInput" class="input-text" min="1" max="30" value="8" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.15rem;">
+          <label style="font-size: 0.82rem; font-weight: 600; display: block; margin-bottom: 0.3rem;">
+            🚶 走道/过道位置 (在哪些列的右侧设置行走过道，逗号分隔):
+          </label>
+          <input type="text" id="seatAislesInput" class="input-text" placeholder="例如：2, 6 (默认将教室分为三大组两过道)" />
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">典型布局：8列教室输入 2, 6（即2-4-2三大组模式）或 2, 4, 6（两两同桌模式）</div>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.6rem; font-size: 0.78rem; color: #166534; margin-bottom: 1.15rem;">
+          💡 <strong>快速换座提示：</strong> 在主界面上直接<strong>鼠标按住任意学生座位拖动</strong>到另一个位置，即可一秒完成<strong>互换座位或移到空位</strong>！
+        </div>
+
+        <div style="display: flex; gap: 0.45rem; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="app.saveSeatDimensionConfig()">保存排座与过道设置</button>
+          <button class="btn btn-outline" onclick="app.autoFillSeatsByStudentId()">按学号自动排座</button>
+          <button class="btn btn-outline" onclick="app.randomizeSeats()">🎲 随机排座</button>
+          <button class="btn btn-danger-outline" onclick="app.clearAllSeats()">清空排座</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('seatConfigModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 7：批量添加学生 (支持学号与姓名) ================= -->
+  <div id="batchAddModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>批量导入学生名单 (支持学号与姓名)</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('batchAddModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.65rem; line-height: 1.5; background: var(--bg-subtle); padding: 0.65rem 0.85rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+          <div><strong>📌 支持多种输入与粘贴格式（每行一人）：</strong></div>
+          <div>1. <strong>学号+姓名</strong>：<code>01 张三</code> 或 <code>1001 李四</code> 或 <code>张三 01</code></div>
+          <div>2. <strong>Excel直接复制</strong>：从 Excel 复制“学号”和“姓名”两列直接粘贴到下方</div>
+          <div>3. <strong>纯姓名</strong>：<code>张三</code>（系统将自动按顺序分配学号）</div>
+          <div style="color: var(--primary-600); margin-top: 0.25rem;">✨ 导入后系统自动按学号升序排座（默认 8 列自适应）。</div>
+        </div>
+        <textarea id="batchAddTextarea" class="input-text" style="width: 100%; height: 170px; resize: vertical; font-family: monospace; font-size: 0.85rem;" placeholder="支持直接粘贴 Excel 学号与姓名两列，例如：
+01	张小明
+02	李小红
+03	王小刚
+或者带学号的文本：
+1001 张三
+1002 李四
+或者纯姓名：
+王五
+赵六..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('batchAddModal')">取消</button>
+        <button class="btn btn-primary" onclick="app.submitBatchAddStudents()">确认导入学生</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 8：添加单个学生 ================= -->
+  <div id="addStudentSingleModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="studentSingleModalTitle">添加学生</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('addStudentSingleModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="studentSingleForm" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <input type="hidden" id="editStudentInternalId" value="" />
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600;">学生姓名 *</label>
+            <input type="text" id="singleStuName" class="input-text" required placeholder="如：张三" />
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 600;">学号 (留空自动分配)</label>
+              <input type="text" id="singleStuId" class="input-text" placeholder="如：01" />
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 600;">性别</label>
+              <select id="singleStuGender" class="input-text">
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem;">
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 600;">小组/职务</label>
+              <input type="text" id="singleStuGroup" class="input-text" placeholder="如：第一组 / 语文课代表" />
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 600;">家长联系电话</label>
+              <input type="text" id="singleStuParentPhone" class="input-text" placeholder="如：13800000000" />
+            </div>
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600;">备注说明</label>
+            <input type="text" id="singleStuNote" class="input-text" placeholder="如：字迹工整、重点关注" />
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('addStudentSingleModal')">取消</button>
+        <button class="btn btn-primary" onclick="app.saveSingleStudent()">保存学生档案</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 9：数据备份与恢复 ================= -->
+  <div id="backupModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>本地数据备份与迁移恢复</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('backupModal')">×</button>
+      </div>
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 0.85rem;">
+        <p style="font-size: 0.82rem; color: var(--text-muted);">
+          本系统为纯离线运行，所有数据实时安全保存在您的浏览器中。导出 JSON 存档文件可在任何其他电脑上导入复原。
+        </p>
+        <div style="display: flex; gap: 0.85rem; align-items: center; justify-content: space-around; padding: 0.75rem 0;">
+          <button class="btn btn-primary btn-lg" onclick="app.backupDataJSON()">
+            💾 导出完整备份文件 (.json)
+          </button>
+          <button class="btn btn-outline btn-lg" onclick="document.getElementById('backupFileInput').click()">
+            📥 导入备份文件复原
+          </button>
+          <input type="file" id="backupFileInput" accept=".json" style="display: none;" onchange="app.restoreDataJSON(this.files[0])" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="app.closeModal('backupModal')">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 模态弹窗 10：操作指南 ================= -->
+  <div id="helpModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>💡 教师操作指南</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('helpModal')">×</button>
+      </div>
+      <div class="modal-body" style="font-size: 0.85rem; line-height: 1.6; display: flex; flex-direction: column; gap: 0.65rem;">
+        <div><strong>1. 左侧任务专栏：</strong>首页左侧直观罗列班级各项任务，支持极速新建任务、一键切换当前任务、查看达标率进度条，无需弹窗即可秒速流转！</div>
+        <div><strong>2. 座位图标随心切换：</strong>支持在工具栏自由切换“🪑 课桌”、“🎈 气球”、“⭐ 星星”、“🌸 花瓣”等图形，大名字居中醒目，激发课堂趣味与学生积极性！</div>
+        <div><strong>3. 紧凑小屏友好：</strong>顶部栏目高度极致精简，核心统计数据（总人数、已完成、待完成、完成率）居左醒目呈现，极大扩展下方座位展示空间，完美适配小屏笔记本！</div>
+        <div><strong>4. 课堂抽查神器：</strong>点击“🎲 随机抽查”，动态抽取待完成学生，抽查通过后直接点“检查通过”一秒打卡！</div>
+        <div><strong>5. 纯离线安全：</strong>无需连网，零配置，本地数据持久保存，双击 index.html 即可打开使用。</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="app.closeModal('helpModal')">知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast 消息容器 -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- 核心逻辑脚本 -->
+  <script src="src/js/app.js"></script>
+</body>
+</html>

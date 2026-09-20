@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>赛博朋克 / 科幻HUD倒计时 - 离线全屏版</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    :root {
+      --primary: #00f0ff;
+      --accent: #ff003c;
+      --yellow: #fcee0a;
+      --bg: #05050a;
+      --card-bg: rgba(10, 16, 26, 0.75);
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--primary);
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Consolas', 'Courier New', monospace;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* 扫描线与暗角光效 */
+    body::before {
+      content: " ";
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      z-index: 20;
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+    }
+    body::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%);
+      pointer-events: none;
+      z-index: 21;
+    }
+
+    /* 背景画布 */
+    #bgCanvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    /* 顶部HUD */
+    .hud-header {
+      position: absolute;
+      top: 24px;
+      left: 36px;
+      right: 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 30;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+      padding-bottom: 12px;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    }
+    .hud-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-badge {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--yellow);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--yellow);
+      animation: blink 1.2s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    /* 核心倒计时容器 */
+    .timer-container {
+      position: relative;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 60px;
+      border: 1px solid rgba(0, 240, 255, 0.35);
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.15), inset 0 0 25px rgba(0, 240, 255, 0.08);
+      clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
+      transition: all 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+    }
+    .timer-container.urgent {
+      border-color: var(--accent);
+      box-shadow: 0 0 60px rgba(255, 0, 60, 0.4), inset 0 0 30px rgba(255, 0, 60, 0.2);
+    }
+    .timer-container.urgent .hud-label,
+    .timer-container.urgent .digit-box {
+      color: var(--accent);
+      text-shadow: 0 0 18px rgba(255, 0, 60, 0.8);
+    }
+
+    .hud-tag {
+      font-size: 11px;
+      color: var(--yellow);
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    /* 赛博朋克任务名称输入框 */
+    .cyber-task-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      background: rgba(0, 240, 255, 0.06);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 4px 14px;
+      border-radius: 4px;
+      transition: all 0.25s ease;
+    }
+    .cyber-task-bar:focus-within {
+      background: rgba(0, 240, 255, 0.12);
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+    .cyber-task-prefix {
+      font-size: 11px;
+      color: var(--yellow);
+      letter-spacing: 2px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .cyber-task-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: clamp(12px, 1.5vw, 15px);
+      letter-spacing: 1px;
+      font-weight: 700;
+      text-align: center;
+      min-width: 180px;
+      max-width: 320px;
+    }
+    .cyber-task-input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+      font-weight: normal;
+    }
+
+    /* 数字显示 */
+    .digits-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .digit-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .digit-box {
+      font-size: clamp(48px, 10vw, 110px);
+      font-weight: 900;
+      font-family: 'Consolas', 'Courier New', monospace;
+      color: var(--primary);
+      text-shadow: 0 0 20px rgba(0, 240, 255, 0.7);
+      min-width: 1.2em;
+      text-align: center;
+      line-height: 1;
+      position: relative;
+    }
+    .colon {
+      font-size: clamp(40px, 8vw, 90px);
+      color: var(--primary);
+      text-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+      padding: 0 4px;
+      animation: blinkColon 1s step-start infinite;
+    }
+    @keyframes blinkColon {
+      50% { opacity: 0.3; }
+    }
+    .hud-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      margin-top: 8px;
+      color: rgba(0, 240, 255, 0.65);
+      font-weight: bold;
+    }
+
+    /* 环形与线性进度条 */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 240, 255, 0.15);
+      margin-top: 30px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 3px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--yellow), var(--primary));
+      box-shadow: 0 0 15px var(--primary);
+      transition: width 0.3s ease;
+    }
+    .timer-container.urgent .progress-bar-fill {
+      background: linear-gradient(90deg, var(--yellow), var(--accent));
+      box-shadow: 0 0 15px var(--accent);
+    }
+
+    /* 交互悬浮控制栏 */
+    .controls {
+      position: absolute;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 40;
+      background: rgba(8, 12, 20, 0.85);
+      padding: 10px 24px;
+      border-radius: 30px;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+      transition: opacity 0.3s, transform 0.3s;
+      max-width: 96vw;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .controls::-webkit-scrollbar {
+      display: none;
+    }
+    .controls.autohide {
+      opacity: 0.15;
+    }
+    .controls:hover, .controls.autohide:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: var(--primary);
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:hover {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+      transform: scale(1.05);
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    button.primary {
+      background: rgba(0, 240, 255, 0.25);
+      border-color: var(--primary);
+    }
+
+    /* 快捷预设按钮 */
+    .preset-btns {
+      display: flex;
+      gap: 8px;
+    }
+    .preset-btn {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-color: rgba(255, 255, 255, 0.2);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .preset-btn:hover {
+      color: var(--yellow);
+      border-color: var(--yellow);
+      box-shadow: 0 0 10px rgba(252, 238, 10, 0.4);
+    }
+
+    /* 自定义时间输入弹窗 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: #0d131f;
+      border: 1px solid var(--primary);
+      padding: 30px;
+      border-radius: 8px;
+      width: 360px;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+      text-align: center;
+    }
+    .modal-title {
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: var(--yellow);
+      letter-spacing: 2px;
+    }
+    .time-inputs {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .input-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .input-col input {
+      width: 70px;
+      height: 48px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      color: #fff;
+      font-size: 24px;
+      font-family: inherit;
+      border-radius: 4px;
+      outline: none;
+    }
+    .input-col input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+    }
+    .input-col label {
+      font-size: 11px;
+      margin-top: 6px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* 归零全屏警告与重叠HUD动效 */
+    .finish-alert {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      font-size: clamp(36px, 8vw, 84px);
+      font-weight: 900;
+      color: var(--accent);
+      text-shadow: 0 0 30px var(--accent);
+      letter-spacing: 6px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
+      border: 4px solid var(--accent);
+      padding: 20px 40px;
+      background: rgba(0,0,0,0.8);
+    }
+    .finish-alert.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* 快捷键提示 */
+    .shortcuts-hint {
+      position: absolute;
+      bottom: 12px;
+      right: 20px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.3);
+      z-index: 30;
+      pointer-events: none;
+    }
+    .back-btn {
+      position: absolute;
+      top: 24px;
+      left: 36px;
+      z-index: 35;
+      text-decoration: none;
+      color: var(--primary);
+      font-size: 12px;
+      letter-spacing: 1px;
+      border: 1px solid rgba(0,240,255,0.3);
+      padding: 4px 10px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(0,240,255,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 返回主页按钮 -->
+  <a href="../index.html" class="back-btn">← 大厅主页</a>
+
+  <!-- 背景粒子/雷达画板 -->
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- 顶部HUD状态 -->
+  <div class="hud-header" style="margin-left: 100px;">
+    <div class="hud-title">
+      <span class="status-badge" id="statusDot"></span>
+      <span id="sysStatusText">CYBER-CHRONO // SYSTEM ACTIVE</span>
+    </div>
+    <div id="clockNow">UTC 00:00:00</div>
+  </div>
+
+  <!-- 主倒计时主体 -->
+  <div class="timer-container" id="timerBox">
+    <div class="cyber-task-bar">
+      <span class="cyber-task-prefix">🎯 MISSION //</span>
+      <input type="text" id="taskInput" class="cyber-task-input" placeholder="输入当前作战/执行任务..." maxlength="40" spellcheck="false" autocomplete="off">
+    </div>
+    <div class="digits-wrapper">
+      <div class="digit-group" id="hoursGroup">
+        <div class="digit-box" id="hours">00</div>
+        <div class="hud-label">HOURS</div>
+      </div>
+      <div class="colon" id="hoursColon">:</div>
+      <div class="digit-group">
+        <div class="digit-box" id="minutes">10</div>
+        <div class="hud-label">MINUTES</div>
+      </div>
+      <div class="colon">:</div>
+      <div class="digit-group">
+        <div class="digit-box" id="seconds">00</div>
+        <div class="hud-label">SECONDS</div>
+      </div>
+      <div class="colon" style="font-size: clamp(24px, 4vw, 50px); opacity:0.6;">.</div>
+      <div class="digit-group">
+        <div class="digit-box" id="millis" style="font-size: clamp(24px, 5vw, 60px); opacity:0.85;">00</div>
+        <div class="hud-label">MS</div>
+      </div>
+    </div>
+
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+  </div>
+
+  <!-- 倒计时结束警报框 -->
+  <div class="finish-alert" id="finishAlert">
+    <div>TIME OVER</div>
+    <div style="font-size: 18px; margin-top: 10px; color: #fff; letter-spacing: 2px;">PROTOCOL COMPLETED</div>
+  </div>
+
+  <!-- 悬浮控制栏 -->
+  <div class="controls" id="controlsBar">
+    <button class="primary" id="btnToggle">▶ 开始 (Space)</button>
+    <button id="btnReset">↺ 重置 (R)</button>
+    
+    <div class="preset-btns">
+      <button class="preset-btn" onclick="setPreset(60)">1分钟</button>
+      <button class="preset-btn" onclick="setPreset(300)">5分钟</button>
+      <button class="preset-btn" onclick="setPreset(600)">10分钟</button>
+      <button class="preset-btn" onclick="setPreset(1500)">25分(番茄)</button>
+    </div>
+
+    <button id="btnCustom">⚙ 自定义</button>
+    <button id="btnSound">🔊 音效: 开</button>
+    <button id="btnFullscreen">⛶ 全屏 (F)</button>
+  </div>
+
+  <!-- 快捷键提示 -->
+  <div class="shortcuts-hint">
+    [空格] 暂停/启动 &nbsp;|&nbsp; [F] 全屏 &nbsp;|&nbsp; [R] 重置
+  </div>
+
+  <!-- 自定义时间弹窗 -->
+  <div class="modal-overlay" id="customModal">
+    <div class="modal-content">
+      <div class="modal-title">设置倒计时时长</div>
+      <div class="time-inputs">
+        <div class="input-col">
+          <input type="number" id="inputHours" min="0" max="99" value="0">
+          <label>时</label>
+        </div>
+        <div class="input-col">
+          <input type="number" id="inputMinutes" min="0" max="59" value="10">
+          <label>分</label>
+        </div>
+        <div class="input-col">
+          <input type="number" id="inputSeconds" min="0" max="59" value="0">
+          <label>秒</label>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="primary" id="btnApplyCustom">确认</button>
+        <button onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       纯离线 Web Audio API 音效生成器（无需加载任何外部音频）
+       ========================================================== */
+    class CyberAudio {
+      constructor() {
+        this.ctx = null;
+        this.soundEnabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTick() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1200, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.04);
+        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.04);
+      }
+      playWarning() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+        osc.frequency.setValueAtTime(440, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.2);
+      }
+      playAlarm() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        for (let i = 0; i < 3; i++) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          const startTime = this.ctx.currentTime + i * 0.25;
+          osc.frequency.setValueAtTime(1400, startTime);
+          osc.frequency.setValueAtTime(900, startTime + 0.12);
+          gain.gain.setValueAtTime(0.15, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.22);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.22);
+        }
+      }
+    }
+
+    const sound = new CyberAudio();
+
+    /* ==========================================================
+       倒计时逻辑核心
+       ========================================================== */
+    let totalDurationMs = 10 * 60 * 1000; // 默认10分钟
+    let remainingMs = totalDurationMs;
+    let isRunning = false;
+    let lastTime = 0;
+    let animFrame = null;
+    let lastSecondInt = -1;
+
+    const elHours = document.getElementById('hours');
+    const elMinutes = document.getElementById('minutes');
+    const elSeconds = document.getElementById('seconds');
+    const elMillis = document.getElementById('millis');
+    const elProgressBar = document.getElementById('progressBar');
+    const elTimerBox = document.getElementById('timerBox');
+    const elFinishAlert = document.getElementById('finishAlert');
+    const elBtnToggle = document.getElementById('btnToggle');
+    const elSysStatus = document.getElementById('sysStatusText');
+    const elClockNow = document.getElementById('clockNow');
+
+    let hasHoursSet = false;
+    const elHoursGroup = document.getElementById('hoursGroup');
+    const elHoursColon = document.getElementById('hoursColon');
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function updateDisplay(ms) {
+      if (ms < 0) ms = 0;
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const ml = Math.floor((ms % 1000) / 10);
+
+      if (hasHoursSet || h > 0) {
+        if (elHoursGroup) elHoursGroup.style.display = 'flex';
+        if (elHoursColon) elHoursColon.style.display = 'block';
+        elHours.textContent = pad2(h);
+      } else {
+        if (elHoursGroup) elHoursGroup.style.display = 'none';
+        if (elHoursColon) elHoursColon.style.display = 'none';
+      }
+
+      elMinutes.textContent = pad2(m);
+      elSeconds.textContent = pad2(s);
+      elMillis.textContent = pad2(ml);
+
+      const progress = totalDurationMs > 0 ? (ms / totalDurationMs) * 100 : 0;
+      elProgressBar.style.width = progress + '%';
+
+      // 紧急高亮 (最后10秒)
+      if (ms <= 10000 && ms > 0) {
+        elTimerBox.classList.add('urgent');
+      } else {
+        elTimerBox.classList.remove('urgent');
+      }
+
+      // 每秒嘀嗒/预警音效
+      if (isRunning && totalSec !== lastSecondInt) {
+        if (ms <= 10000 && ms > 0) {
+          sound.playWarning();
+        } else if (ms > 0) {
+          sound.playTick();
+        }
+        lastSecondInt = totalSec;
+      }
+    }
+
+    function tick(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const delta = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (isRunning) {
+        remainingMs -= delta;
+        if (remainingMs <= 0) {
+          remainingMs = 0;
+          isRunning = false;
+          updateDisplay(0);
+          handleFinish();
+          return;
+        }
+        updateDisplay(remainingMs);
+      }
+      animFrame = requestAnimationFrame(tick);
+    }
+
+    function startTimer() {
+      sound.init();
+      if (remainingMs <= 0) {
+        remainingMs = totalDurationMs;
+        elFinishAlert.classList.remove('show');
+      }
+      isRunning = true;
+      lastTime = performance.now();
+      elBtnToggle.textContent = '⏸ 暂停 (Space)';
+      elBtnToggle.classList.add('primary');
+      elSysStatus.textContent = 'CYBER-CHRONO // COUNTING DOWN';
+      cancelAnimationFrame(animFrame);
+      animFrame = requestAnimationFrame(tick);
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      elBtnToggle.textContent = '▶ 继续 (Space)';
+      elBtnToggle.classList.remove('primary');
+      elSysStatus.textContent = 'CYBER-CHRONO // PAUSED';
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        pauseTimer();
+      } else {
+        startTimer();
+      }
+    }
+
+    function resetTimer(newDuration) {
+      isRunning = false;
+      cancelAnimationFrame(animFrame);
+      if (newDuration !== undefined) {
+        totalDurationMs = newDuration;
+      }
+      remainingMs = totalDurationMs;
+      lastSecondInt = -1;
+      elFinishAlert.classList.remove('show');
+      elTimerBox.classList.remove('urgent');
+      elBtnToggle.textContent = '▶ 开始 (Space)';
+      elBtnToggle.classList.add('primary');
+      elSysStatus.textContent = 'CYBER-CHRONO // READY';
+      updateDisplay(remainingMs);
+    }
+
+    function setPreset(seconds) {
+      hasHoursSet = false;
+      resetTimer(seconds * 1000);
+      startTimer();
+    }
+
+    function handleFinish() {
+      elFinishAlert.classList.add('show');
+      elSysStatus.textContent = 'CYBER-CHRONO // PROTOCOL EXPIRED';
+      elBtnToggle.textContent = '↺ 重新开始';
+      sound.playAlarm();
+    }
+
+    // 绑定事件
+    elBtnToggle.addEventListener('click', toggleTimer);
+    document.getElementById('btnReset').addEventListener('click', () => resetTimer());
+
+    // 实时系统时间
+    setInterval(() => {
+      const now = new Date();
+      elClockNow.textContent = 'LOCAL ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes()) + ':' + pad2(now.getSeconds());
+    }, 1000);
+
+    /* ==========================================================
+       全屏与交互控制
+       ========================================================== */
+    const btnFullscreen = document.getElementById('btnSound');
+    const fsBtn = document.getElementById('btnFullscreen');
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+    fsBtn.addEventListener('click', toggleFullScreen);
+
+    document.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button, a, input, select, textarea, .modal-content')) return;
+      toggleFullScreen();
+    });
+
+    // 音效开关
+    const btnSound = document.getElementById('btnSound');
+    btnSound.addEventListener('click', () => {
+      sound.soundEnabled = !sound.soundEnabled;
+      btnSound.textContent = sound.soundEnabled ? '🔊 音效: 开' : '🔇 音效: 关';
+    });
+
+    // 快捷键支持
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.target.id === 'taskInput' && e.key === 'Enter') e.target.blur();
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleTimer();
+      } else if (e.key === 'r' || e.key === 'R') {
+        resetTimer();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullScreen();
+      }
+    });
+
+    // 自定义任务名持久化与交互
+    const taskInput = document.getElementById('taskInput');
+    const savedTask = localStorage.getItem('countdown_task_name') || '';
+    if (savedTask) taskInput.value = savedTask;
+    taskInput.addEventListener('input', () => {
+      localStorage.setItem('countdown_task_name', taskInput.value);
+    });
+    taskInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') taskInput.blur();
+    });
+
+    // 自动淡出控制条
+    const controlsBar = document.getElementById('controlsBar');
+    let hideTimer = null;
+    window.addEventListener('mousemove', () => {
+      controlsBar.classList.remove('autohide');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (isRunning) {
+          controlsBar.classList.add('autohide');
+        }
+      }, 4000);
+    });
+
+    /* ==========================================================
+       自定义时间弹窗
+       ========================================================== */
+    const customModal = document.getElementById('customModal');
+    const inputHours = document.getElementById('inputHours');
+    const inputMinutes = document.getElementById('inputMinutes');
+    const inputSeconds = document.getElementById('inputSeconds');
+
+    document.getElementById('btnCustom').addEventListener('click', () => {
+      const curSec = Math.floor(totalDurationMs / 1000);
+      inputHours.value = Math.floor(curSec / 3600);
+      inputMinutes.value = Math.floor((curSec % 3600) / 60);
+      inputSeconds.value = curSec % 60;
+      customModal.classList.add('open');
+    });
+
+    function closeModal() {
+      customModal.classList.remove('open');
+    }
+
+    document.getElementById('btnApplyCustom').addEventListener('click', () => {
+      const h = parseInt(inputHours.value, 10) || 0;
+      const m = parseInt(inputMinutes.value, 10) || 0;
+      const s = parseInt(inputSeconds.value, 10) || 0;
+      const total = (h * 3600 + m * 60 + s) * 1000;
+      if (total > 0) {
+        hasHoursSet = (h > 0);
+        closeModal();
+        resetTimer(total);
+        startTimer();
+      }
+    });
+
+    /* ==========================================================
+       Canvas 动态雷达扫描与数字雨粒子背景 (离线原生实现)
+       ========================================================== */
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    let scanAngle = 0;
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      initParticles();
+    }
+    window.addEventListener('resize', resize);
+
+    function initParticles() {
+      particles = [];
+      const count = Math.floor((width * height) / 12000);
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          size: Math.random() * 2 + 1,
+          alpha: Math.random() * 0.5 + 0.2
+        });
+      }
+    }
+
+    function drawBg() {
+      ctx.fillStyle = 'rgba(5, 7, 12, 0.25)';
+      ctx.fillRect(0, 0, width, height);
+
+      // 绘制粒子与动态连线
+      ctx.fillStyle = '#00f0ff';
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        ctx.globalAlpha = p.alpha;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+
+        // 邻近粒子连线
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (dist < 80) {
+            ctx.strokeStyle = '#00f0ff';
+            ctx.globalAlpha = (1 - dist / 80) * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // 中央高科技同心圆与雷达扫描线
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) * 0.38;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // 同心虚线环
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 10]);
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius * 0.75, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius * 0.5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // 雷达扇形扫描
+      scanAngle += 0.015;
+      const gradient = ctx.createRadialGradient(0, 0, 10, 0, 0, radius);
+      gradient.addColorStop(0, 'rgba(0, 240, 255, 0.15)');
+      gradient.addColorStop(1, 'rgba(0, 240, 255, 0)');
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, radius, scanAngle, scanAngle + 0.35);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.restore();
+
+      requestAnimationFrame(drawBg);
+    }
+
+    resize();
+    drawBg();
+    updateDisplay(totalDurationMs);
+  </script>
+</body>
+</html>

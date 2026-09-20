@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拆弹危机 / 极速心跳倒计时 - 离线全屏版</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    :root {
+      --bg: #111417;
+      --panel: #20242a;
+      --led-red: #ff1e27;
+      --wire-red: #e74c3c;
+      --wire-blue: #3498db;
+      --wire-yellow: #f1c40f;
+      --wire-green: #2ecc71;
+    }
+    body {
+      background-color: var(--bg);
+      color: #fff;
+      font-family: 'Segoe UI', -apple-system, monospace;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* 顶部导航 */
+    .top-bar {
+      position: absolute;
+      top: 24px;
+      left: 32px;
+      right: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+    .back-btn {
+      color: #888;
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid #333;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      color: #fff;
+      border-color: #666;
+    }
+
+    /* 爆炸冲击震屏容器 */
+    .bomb-device-wrap {
+      transition: transform 0.05s;
+      z-index: 10;
+    }
+    .shaking {
+      animation: heavyShake 0.08s infinite;
+    }
+    @keyframes heavyShake {
+      0% { transform: translate(3px, 2px) rotate(0.4deg); }
+      25% { transform: translate(-3px, -2px) rotate(-0.4deg); }
+      50% { transform: translate(2px, -3px) rotate(0.2deg); }
+      75% { transform: translate(-2px, 3px) rotate(-0.2deg); }
+      100% { transform: translate(3px, 2px) rotate(0.4deg); }
+    }
+
+    /* 拟真 C4 定时炸弹外壳 */
+    .c4-body {
+      background: #2b2e36;
+      border: 4px solid #1a1c22;
+      border-radius: 16px;
+      padding: 36px 48px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), inset 0 2px 5px rgba(255,255,255,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      position: relative;
+      max-width: 90vw;
+    }
+
+    /* 胶带固定效果 */
+    .tape-strip {
+      position: absolute;
+      background: rgba(220, 210, 180, 0.25);
+      backdrop-filter: blur(2px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .tape-1 { top: -14px; left: 30px; width: 90px; height: 30px; transform: rotate(-6deg); }
+    .tape-2 { bottom: -14px; right: 40px; width: 100px; height: 32px; transform: rotate(4deg); }
+
+    /* 经典红色 7 段式数码管屏幕 */
+    .digital-screen {
+      background: #080203;
+      border: 3px solid #16181d;
+      border-radius: 8px;
+      padding: 16px 36px;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .led-digits {
+      font-size: clamp(44px, 9vw, 106px);
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 900;
+      color: var(--led-red);
+      text-shadow: 0 0 20px rgba(255, 30, 39, 0.9), 0 0 40px rgba(255, 30, 39, 0.4);
+      letter-spacing: 4px;
+      line-height: 1;
+    }
+
+    /* 4 根导线切割区 */
+    .wires-container {
+      display: flex;
+      gap: clamp(16px, 4vw, 36px);
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .wire-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .wire-item:hover:not(.cut) {
+      transform: scale(1.08);
+    }
+    .wire-line {
+      width: 18px;
+      height: 110px;
+      border-radius: 9px;
+      position: relative;
+      transition: all 0.2s;
+      box-shadow: inset -2px -2px 5px rgba(0,0,0,0.5), inset 2px 2px 5px rgba(255,255,255,0.4);
+    }
+    .wire-line.red { background: var(--wire-red); }
+    .wire-line.blue { background: var(--wire-blue); }
+    .wire-line.yellow { background: var(--wire-yellow); }
+    .wire-line.green { background: var(--wire-green); }
+
+    /* 导线剪断状态 */
+    .wire-item.cut .wire-line {
+      height: 35px;
+      margin-bottom: 40px;
+      box-shadow: none;
+      filter: brightness(0.6);
+      position: relative;
+    }
+    .wire-item.cut .wire-line::after {
+      content: "";
+      position: absolute;
+      bottom: -35px;
+      left: 0;
+      width: 100%;
+      height: 35px;
+      background: inherit;
+      border-radius: 0 0 9px 9px;
+    }
+    .wire-tag {
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    /* 状态指示灯与蜂鸣喇叭 */
+    .c4-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 10px;
+    }
+    .indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      letter-spacing: 2px;
+    }
+    .indicator-led {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--led-red);
+      box-shadow: 0 0 10px var(--led-red);
+      animation: alertFlash 0.5s infinite alternate;
+    }
+    @keyframes alertFlash {
+      0% { opacity: 0.2; }
+      100% { opacity: 1; }
+    }
+    .indicator-led.defused {
+      background: #2ecc71;
+      box-shadow: 0 0 10px #2ecc71;
+      animation: none;
+    }
+
+    /* 爆炸画布 */
+    #boomCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* 底部控制台 */
+    .controls {
+      position: absolute;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(22, 26, 32, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 10px 24px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 30;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      transition: opacity 0.3s;
+      max-width: 96vw;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .controls::-webkit-scrollbar {
+      display: none;
+    }
+    .controls.autohide {
+      opacity: 0.15;
+    }
+    .controls:hover, .controls.autohide:hover {
+      opacity: 1;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.04);
+    }
+    button.primary {
+      background: var(--led-red);
+      border-color: var(--led-red);
+    }
+
+    /* 游戏结果大提示 */
+    .result-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .result-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .result-title {
+      font-size: clamp(36px, 8vw, 84px);
+      font-weight: 900;
+      letter-spacing: 6px;
+      margin-bottom: 12px;
+    }
+    .result-title.win {
+      color: #2ecc71;
+      text-shadow: 0 0 30px #2ecc71;
+    }
+    .result-title.lose {
+      color: #ff1e27;
+      text-shadow: 0 0 40px #ff1e27;
+    }
+
+    /* 拆弹倒计时自定义弹窗 */
+    .bomb-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 120;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .bomb-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .bomb-modal-card {
+      background: #1e222a;
+      border: 2px solid var(--led-red);
+      box-shadow: 0 0 35px rgba(255, 30, 39, 0.4);
+      border-radius: 12px;
+      padding: 26px 36px;
+      width: 380px;
+      text-align: center;
+    }
+    .bomb-modal-title {
+      font-size: 15px;
+      color: var(--led-red);
+      letter-spacing: 2px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .bomb-input-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .bomb-input-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .bomb-input-col input {
+      width: 80px;
+      height: 48px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 30, 39, 0.4);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 24px;
+      font-family: 'Consolas', monospace;
+      text-align: center;
+      outline: none;
+    }
+    .bomb-input-col input:focus {
+      border-color: var(--led-red);
+      box-shadow: 0 0 12px var(--led-red);
+    }
+    .bomb-input-col span {
+      font-size: 11px;
+      color: #888;
+    }
+
+    /* 拆弹作战任务目标条 */
+    .bomb-task-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      background: rgba(30, 34, 42, 0.85);
+      border: 1px solid rgba(255, 30, 39, 0.4);
+      box-shadow: 0 0 15px rgba(255, 30, 39, 0.15);
+      border-radius: 6px;
+      padding: 5px 16px;
+      backdrop-filter: blur(8px);
+      transition: all 0.25s ease;
+      z-index: 20;
+    }
+    .bomb-task-bar:focus-within {
+      border-color: var(--led-red);
+      box-shadow: 0 0 20px rgba(255, 30, 39, 0.35);
+      background: rgba(30, 34, 42, 0.98);
+    }
+    .bomb-task-tag {
+      font-size: 11px;
+      color: var(--led-red);
+      letter-spacing: 2px;
+      font-weight: bold;
+      font-family: 'Consolas', monospace;
+    }
+    .bomb-task-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: clamp(12px, 1.5vw, 15px);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-align: center;
+      min-width: 180px;
+      max-width: 320px;
+    }
+    .bomb-task-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+      font-weight: normal;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="boomCanvas"></canvas>
+
+  <div class="top-bar">
+    <a href="../index.html" class="back-btn">← 大厅主页</a>
+    <div style="font-size: 12px; color: #888; letter-spacing: 2px;">DEFUSE PROTOCOL // BOMB ACTIVE</div>
+  </div>
+
+  <!-- 自定义拆弹作战任务名称 -->
+  <div class="bomb-task-bar">
+    <span class="bomb-task-tag">⚠️ MISSION OBJECTIVE //</span>
+    <input type="text" id="taskInput" class="bomb-task-input" placeholder="输入紧急攻坚 / 任务名称..." maxlength="40" spellcheck="false" autocomplete="off">
+  </div>
+
+  <div class="bomb-device-wrap" id="bombDevice">
+    <div class="c4-body">
+      <div class="tape-strip tape-1"></div>
+      <div class="tape-strip tape-2"></div>
+
+      <!-- LED 数码管倒计时 -->
+      <div class="digital-screen">
+        <div class="led-digits" id="digits">00:30.00</div>
+      </div>
+
+      <!-- 导线互动区 -->
+      <div class="wires-container">
+        <div class="wire-item" onclick="cutWire('red')">
+          <div class="wire-line red" id="wire-red"></div>
+          <span class="wire-tag">红线</span>
+        </div>
+        <div class="wire-item" onclick="cutWire('blue')">
+          <div class="wire-line blue" id="wire-blue"></div>
+          <span class="wire-tag">蓝线</span>
+        </div>
+        <div class="wire-item" onclick="cutWire('yellow')">
+          <div class="wire-line yellow" id="wire-yellow"></div>
+          <span class="wire-tag">黄线</span>
+        </div>
+        <div class="wire-item" onclick="cutWire('green')">
+          <div class="wire-line green" id="wire-green"></div>
+          <span class="wire-tag">绿线</span>
+        </div>
+      </div>
+
+      <div class="c4-footer">
+        <div class="indicator">
+          <div class="indicator-led" id="statusLed"></div>
+          <span id="statusTxt" style="color: #aaa;">ARMED · 倒数进行中</span>
+        </div>
+        <div style="font-size: 11px; color: #666;">点击上方导线进行剪线拆弹</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结果全屏弹层 -->
+  <div class="result-overlay" id="resultOverlay">
+    <div class="result-title" id="resultTitle">BOMB DEFUSED!</div>
+    <p style="color: #bbb; font-size: 16px; margin-bottom: 24px;" id="resultDesc">成功切断安全导线，危机解除！</p>
+    <button class="primary" onclick="resetBomb()" style="padding: 10px 28px; font-size: 15px;">↺ 再来一局</button>
+  </div>
+
+  <!-- 底部操作条 -->
+  <div class="controls" id="controlsBar">
+    <button class="primary" id="btnToggle">▶ 开始倒数 (Space)</button>
+    <button id="btnReset">↺ 复位 (R)</button>
+    <button onclick="setCountdownSec(15)">15秒急救</button>
+    <button onclick="setCountdownSec(30)">30秒心跳</button>
+    <button onclick="setCountdownSec(60)">1分钟拆弹</button>
+    <button id="btnCustom">⚙ 自定义</button>
+    <button id="btnSound">🔊 心跳警报: 开</button>
+    <button id="btnFullscreen">⛶ 全屏 (F)</button>
+  </div>
+
+  <!-- 自定义拆弹倒计时弹窗 -->
+  <div class="bomb-modal-overlay" id="bombModal">
+    <div class="bomb-modal-card">
+      <div class="bomb-modal-title">设定引信倒数时长</div>
+      <div class="bomb-input-row">
+        <div class="bomb-input-col">
+          <input type="number" id="bombInputH" min="0" max="99" value="0">
+          <span>时</span>
+        </div>
+        <div class="bomb-input-col">
+          <input type="number" id="bombInputM" min="0" max="59" value="0">
+          <span>分</span>
+        </div>
+        <div class="bomb-input-col">
+          <input type="number" id="bombInputS" min="1" max="59" value="30">
+          <span>秒</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="primary" id="btnApplyBomb" style="padding: 8px 24px;">装填定时</button>
+        <button onclick="closeBombModal()" style="padding: 8px 18px;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       纯离线 Web Audio 急促心跳声、剪线咔嚓声与剧烈爆炸声
+       ========================================================== */
+    class BombAudio {
+      constructor() {
+        this.ctx = null;
+        this.soundEnabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      // 心跳声/急促嘀声
+      playHeartbeat(rate) {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        // 随时间紧迫度提高频率
+        const freq = rate > 0.7 ? 65 : (rate > 0.4 ? 85 : 120);
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
+
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+      // 剪线声
+      playSnip() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(2400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.06);
+      }
+      // 大爆炸轰鸣音
+      playExplosion() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        // 白噪声爆炸
+        const bufferSize = this.ctx.sampleRate * 2;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(400, now);
+        filter.frequency.linearRampToValueAtTime(60, now + 2);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 2);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+    }
+
+    const sound = new BombAudio();
+
+    /* ==========================================================
+       游戏规则与倒计时
+       ========================================================== */
+    const WIRE_COLORS = ['red', 'blue', 'yellow', 'green'];
+    let safeWire = 'blue';
+    let isGameOver = false;
+    let totalMs = 30 * 1000;
+    let remainMs = totalMs;
+    let isRunning = false;
+    let lastTs = 0;
+    let animId = null;
+    let lastBeatSec = -1;
+
+    const elDigits = document.getElementById('digits');
+    const elDevice = document.getElementById('bombDevice');
+    const elStatusLed = document.getElementById('statusLed');
+    const elStatusTxt = document.getElementById('statusTxt');
+    const elResultOverlay = document.getElementById('resultOverlay');
+    const elResultTitle = document.getElementById('resultTitle');
+    const elResultDesc = document.getElementById('resultDesc');
+    const btnToggle = document.getElementById('btnToggle');
+
+    function pickRandomSafeWire() {
+      safeWire = WIRE_COLORS[Math.floor(Math.random() * WIRE_COLORS.length)];
+      console.log('安全线提示 (作弊调试):', safeWire);
+    }
+    pickRandomSafeWire();
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    let hasHoursSet = false;
+
+    function updateDisplay(ms) {
+      if (ms < 0) ms = 0;
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const cs = Math.floor((ms % 1000) / 10);
+      if (hasHoursSet || h > 0) {
+        elDigits.textContent = `${pad2(h)}:${pad2(m)}:${pad2(s)}.${pad2(cs)}`;
+      } else {
+        elDigits.textContent = `${pad2(m)}:${pad2(s)}.${pad2(cs)}`;
+      }
+
+      // 随时间加速震颤
+      const progress = ms / totalMs;
+      if (ms <= 5000 && ms > 0) {
+        elDevice.classList.add('shaking');
+      } else {
+        elDevice.classList.remove('shaking');
+      }
+
+      if (isRunning && totalSec !== lastBeatSec && ms > 0) {
+        sound.playHeartbeat(progress);
+        lastBeatSec = totalSec;
+      }
+    }
+
+    function gameLoop(ts) {
+      if (!lastTs) lastTs = ts;
+      const delta = ts - lastTs;
+      lastTs = ts;
+
+      if (isRunning) {
+        remainMs -= delta;
+        if (remainMs <= 0) {
+          remainMs = 0;
+          isRunning = false;
+          updateDisplay(0);
+          triggerDetonation('时间耗尽！炸弹引爆！');
+          return;
+        }
+        updateDisplay(remainMs);
+      }
+      animId = requestAnimationFrame(gameLoop);
+    }
+
+    function startBomb() {
+      if (isGameOver) resetBomb();
+      sound.init();
+      isRunning = true;
+      lastTs = performance.now();
+      btnToggle.textContent = '⏸ 暂停 (Space)';
+      cancelAnimationFrame(animId);
+      animId = requestAnimationFrame(gameLoop);
+    }
+
+    function pauseBomb() {
+      isRunning = false;
+      btnToggle.textContent = '▶ 开始倒数 (Space)';
+      elDevice.classList.remove('shaking');
+    }
+
+    function toggleBomb() {
+      if (isRunning) pauseBomb();
+      else startBomb();
+    }
+
+    function setCountdownSec(sec, hoursSet = false) {
+      pauseBomb();
+      hasHoursSet = hoursSet;
+      totalMs = sec * 1000;
+      remainMs = totalMs;
+      resetBomb();
+    }
+
+    function cutWire(color) {
+      if (isGameOver) return;
+      sound.init();
+      sound.playSnip();
+
+      const wireEl = document.querySelector(`.wire-item .wire-line.${color}`).parentElement;
+      if (wireEl.classList.contains('cut')) return;
+      wireEl.classList.add('cut');
+
+      if (!isRunning) startBomb();
+
+      if (color === safeWire) {
+        // 拆弹成功
+        handleDefused();
+      } else {
+        // 剪错立即引爆！
+        triggerDetonation(`切断了${color}导线！触发暗雷陷阱！`);
+      }
+    }
+
+    function handleDefused() {
+      isRunning = false;
+      isGameOver = true;
+      elDevice.classList.remove('shaking');
+      elStatusLed.classList.add('defused');
+      elStatusTxt.textContent = 'DEFUSED · 危机化解';
+      elStatusTxt.style.color = '#2ecc71';
+
+      elResultTitle.className = 'result-title win';
+      elResultTitle.textContent = 'BOMB DEFUSED!';
+      elResultDesc.textContent = `太神了！成功剪断正确的【${safeWire}】导线，拯救了世界！`;
+      elResultOverlay.classList.add('show');
+    }
+
+    function triggerDetonation(reason) {
+      isRunning = false;
+      isGameOver = true;
+      elDevice.classList.add('shaking');
+      sound.playExplosion();
+      startExplosionFX();
+
+      setTimeout(() => {
+        elResultTitle.className = 'result-title lose';
+        elResultTitle.textContent = 'BOOOOOOM!';
+        elResultDesc.textContent = reason;
+        elResultOverlay.classList.add('show');
+      }, 1000);
+    }
+
+    function resetBomb() {
+      isRunning = false;
+      isGameOver = false;
+      cancelAnimationFrame(animId);
+      remainMs = totalMs;
+      lastBeatSec = -1;
+      elDevice.classList.remove('shaking');
+      elStatusLed.classList.remove('defused');
+      elStatusTxt.textContent = 'ARMED · 倒数进行中';
+      elStatusTxt.style.color = '#aaa';
+      elResultOverlay.classList.remove('show');
+      btnToggle.textContent = '▶ 开始倒数 (Space)';
+
+      // 恢复所有导线
+      document.querySelectorAll('.wire-item').forEach(w => w.classList.remove('cut'));
+      pickRandomSafeWire();
+      updateDisplay(remainMs);
+    }
+
+    btnToggle.addEventListener('click', toggleBomb);
+    document.getElementById('btnReset').addEventListener('click', resetBomb);
+
+    /* ==========================================================
+       爆炸震撼火光冲击粒子系统
+       ========================================================== */
+    const boomCanvas = document.getElementById('boomCanvas');
+    const bCtx = boomCanvas.getContext('2d');
+    let bWidth, bHeight;
+    let sparks = [];
+
+    function resizeBoom() {
+      bWidth = boomCanvas.width = window.innerWidth;
+      bHeight = boomCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeBoom);
+    resizeBoom();
+
+    function startExplosionFX() {
+      sparks = [];
+      const cx = bWidth / 2;
+      const cy = bHeight / 2;
+      for (let i = 0; i < 250; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 22 + 4;
+        sparks.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          radius: Math.random() * 12 + 4,
+          color: Math.random() > 0.4 ? '#ff2200' : '#ffa500',
+          alpha: 1
+        });
+      }
+    }
+
+    function renderBoom() {
+      bCtx.clearRect(0, 0, bWidth, bHeight);
+
+      if (sparks.length > 0) {
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const s = sparks[i];
+          s.x += s.vx;
+          s.y += s.vy;
+          s.vx *= 0.96;
+          s.vy *= 0.96;
+          s.alpha -= 0.018;
+
+          if (s.alpha <= 0) {
+            sparks.splice(i, 1);
+            continue;
+          }
+
+          bCtx.save();
+          bCtx.globalAlpha = Math.max(0, s.alpha);
+          bCtx.fillStyle = s.color;
+          bCtx.beginPath();
+          bCtx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+          bCtx.fill();
+          bCtx.restore();
+        }
+      }
+
+      requestAnimationFrame(renderBoom);
+    }
+    renderBoom();
+
+    /* ==========================================================
+       全屏与按键控制
+       ========================================================== */
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    function toggleFs() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    btnFullscreen.addEventListener('click', toggleFs);
+
+    document.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button, a, input, select, textarea, .wire-item, .result-overlay, .bomb-modal-card')) return;
+      toggleFs();
+    });
+
+    const btnSound = document.getElementById('btnSound');
+    btnSound.addEventListener('click', () => {
+      sound.soundEnabled = !sound.soundEnabled;
+      btnSound.textContent = sound.soundEnabled ? '🔊 心跳警报: 开' : '🔇 音效静音';
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.target.id === 'taskInput') {
+          if (e.key === 'Enter') e.target.blur();
+          return;
+        }
+        if (e.key === 'Enter') document.getElementById('btnApplyBomb').click();
+        if (e.key === 'Escape') closeBombModal();
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleBomb();
+      } else if (e.key === 'r' || e.key === 'R') {
+        resetBomb();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFs();
+      } else if (e.key === 'c' || e.key === 'C') {
+        openBombModal();
+      }
+    });
+
+    // 自定义任务名持久化与交互
+    const taskInput = document.getElementById('taskInput');
+    const savedTask = localStorage.getItem('countdown_task_name') || '';
+    if (savedTask) taskInput.value = savedTask;
+    taskInput.addEventListener('input', () => {
+      localStorage.setItem('countdown_task_name', taskInput.value);
+    });
+    taskInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') taskInput.blur();
+    });
+
+    // 自定义拆弹倒数时长弹窗逻辑
+    const bombModal = document.getElementById('bombModal');
+    const bombInputH = document.getElementById('bombInputH');
+    const bombInputM = document.getElementById('bombInputM');
+    const bombInputS = document.getElementById('bombInputS');
+    const btnCustom = document.getElementById('btnCustom');
+
+    function openBombModal() {
+      const curTotalSec = Math.floor(totalMs / 1000);
+      const h = Math.floor(curTotalSec / 3600);
+      const m = Math.floor((curTotalSec % 3600) / 60);
+      const s = curTotalSec % 60;
+      bombInputH.value = h;
+      bombInputM.value = m;
+      bombInputS.value = s;
+      bombModal.classList.add('open');
+      bombInputM.focus();
+    }
+    function closeBombModal() {
+      bombModal.classList.remove('open');
+    }
+    if (btnCustom) {
+      btnCustom.addEventListener('click', openBombModal);
+    }
+    document.getElementById('btnApplyBomb').addEventListener('click', () => {
+      const h = parseInt(bombInputH.value, 10) || 0;
+      const m = parseInt(bombInputM.value, 10) || 0;
+      const s = parseInt(bombInputS.value, 10) || 0;
+      const totalSec = h * 3600 + m * 60 + s;
+      if (totalSec > 0) {
+        closeBombModal();
+        setCountdownSec(totalSec, h > 0);
+        startBomb();
+      }
+    });
+    bombModal.addEventListener('click', (e) => {
+      if (e.target === bombModal) closeBombModal();
+    });
+
+    const controlsBar = document.getElementById('controlsBar');
+    let idleTimer = null;
+    window.addEventListener('mousemove', () => {
+      controlsBar.classList.remove('autohide');
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (isRunning) controlsBar.classList.add('autohide');
+      }, 3500);
+    });
+
+    updateDisplay(remainMs);
+  </script>
+</body>
+</html>

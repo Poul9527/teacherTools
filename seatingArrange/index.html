@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能班级排座系统 (离线版)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- 本地离线运行核心库 -->
+  <script src="libs/vue.global.prod.js"></script>
+  <script src="libs/xlsx.full.min.js"></script>
+  <script src="libs/html2canvas.min.js"></script>
+  <script src="js/defaultData.js"></script>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <!-- 全局提示 Toast -->
+    <transition name="fade">
+      <div v-if="toastMessage" class="toast-tip" style="position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;gap:8px;">
+        <span>🔔</span>
+        <span>{{ toastMessage }}</span>
+      </div>
+    </transition>
+
+    <!-- 顶部导航栏 -->
+    <header class="app-header">
+      <div class="header-container">
+        <!-- 品牌标识与班级切换 -->
+        <div class="brand-section">
+          <div class="brand-logo">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <div class="brand-info">
+            <h1>
+              智能班级排座系统
+              <span class="offline-badge">离线单机版</span>
+            </h1>
+            <span class="subtitle">双击即可运行 · 数据加密保存在本地</span>
+          </div>
+
+          <!-- 班级切换下拉与操作 -->
+          <div class="class-selector-box" v-if="classes.length > 0">
+            <select class="class-select" v-model="currentClassId">
+              <option v-for="c in classes" :key="c.id" :value="c.id">
+                {{ c.name }} ({{ c.students ? c.students.length : 0 }}人)
+              </option>
+            </select>
+            <button class="btn btn-default btn-sm btn-icon" @click="openEditClassModal" title="修改当前班级名称">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+            </button>
+            <button class="btn btn-default btn-sm btn-icon" @click="openCreateClassModal" title="新建班级">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 核心导航标签 -->
+        <div class="nav-tabs">
+          <button class="nav-tab-btn" :class="{ active: activeTab === 'seats' }" @click="activeTab = 'seats'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>座位表</span>
+          </button>
+          <button class="nav-tab-btn" :class="{ active: activeTab === 'roster' }" @click="activeTab = 'roster'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>学生花名册</span>
+          </button>
+          <button class="nav-tab-btn" :class="{ active: activeTab === 'picker' }" @click="activeTab = 'picker'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+            <span>课堂点名抽签</span>
+          </button>
+        </div>
+
+        <!-- 顶部功能按钮：导出与备份 -->
+        <div class="header-actions">
+          <div class="dropdown">
+            <button class="btn btn-default" @click.stop="isBackupMenuOpen=false; isExportMenuOpen = !isExportMenuOpen" title="将当前座位表导出为图片">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>导出图片</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="dropdown-menu" v-if="isExportMenuOpen">
+              <button class="dropdown-item" @click="isExportMenuOpen=false; exportSeatingChartImage()">
+                <span>🎨</span> 导出高清排版图片 (推荐打印)
+              </button>
+              <button class="dropdown-item" @click="isExportMenuOpen=false; exportDomScreenshot()">
+                <span>📷</span> 导出网页视图截图 (所见即所得)
+              </button>
+            </div>
+          </div>
+
+          <button class="btn btn-default" @click="exportToExcel" title="导出为标准 Excel 表格 (.xlsx)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="8" y1="13" x2="16" y2="13"></line>
+              <line x1="8" y1="17" x2="16" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>导出Excel</span>
+          </button>
+
+          <button class="btn btn-default" @click="exportToTxt" title="导出为格式化纯文本表格 (.txt)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>导出TXT</span>
+          </button>
+
+          <!-- 班级历史备份管理 -->
+          <button class="btn btn-default" @click="openHistoryModal" title="查看班级历史排座备份记录、版本恢复与快照管理">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 8v4l3 3"></path>
+              <circle cx="12" cy="12" r="9"></circle>
+            </svg>
+            <span>班级历史备份 ({{ historyBackups.length }})</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主体区域 -->
+    <main class="main-wrapper">
+      <!-- ================= 视图 1: 座位表 ================= -->
+      <div v-show="activeTab === 'seats'">
+        <!-- 工具栏 -->
+        <div class="toolbar-card">
+          <div class="toolbar-left">
+            <!-- 模式切换：排座 vs 打卡 -->
+            <div class="mode-segmented">
+              <button class="mode-btn" :class="{ active: seatMode === 'edit' }" @click="seatMode = 'edit'; cancelSelection()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span>排座调位</span>
+              </button>
+              <button class="mode-btn" :class="{ active: seatMode === 'checkin', 'checkin-active': seatMode === 'checkin' }" @click="seatMode = 'checkin'; cancelSelection()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>座位打卡点名</span>
+              </button>
+            </div>
+
+            <!-- 排座模式专属控制 -->
+            <template v-if="seatMode === 'edit'">
+              <!-- 排座规格设置 -->
+              <button class="btn btn-default" @click="showLayoutModal = true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>排座规格 ({{ rowsCount }}排×{{ colsCount }}列)</span>
+              </button>
+
+              <!-- 智能排座下拉菜单 -->
+              <div class="dropdown">
+                <button class="btn btn-default" @click.stop="showRotateMenu = false; showSmartArrangeMenu = !showSmartArrangeMenu">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                  <span>智能排座</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="dropdown-menu" v-if="showSmartArrangeMenu">
+                  <button class="dropdown-item" @click="autoArrangeByStudentNo">
+                    <span>🎯</span> 按学号顺序排座
+                  </button>
+                  <button class="dropdown-item" @click="autoArrangeByGenderAlternate">
+                    <span>👫</span> 男女交替同桌搭配
+                  </button>
+                  <button class="dropdown-item" @click="autoArrangeRandom">
+                    <span>🎲</span> 全班随机摇号打乱
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button class="dropdown-item" @click="unlockAllSeats">
+                    <span>🔓</span> 一键解锁所有座位
+                  </button>
+                  <button class="dropdown-item danger-item" @click="clearAllSeats">
+                    <span>🧹</span> 清空所有未锁座位
+                  </button>
+                </div>
+              </div>
+
+              <!-- 大组轮换按钮 -->
+              <div class="dropdown">
+                <button class="btn btn-default" @click.stop="showSmartArrangeMenu = false; showRotateMenu = !showRotateMenu">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <polyline points="23 20 23 14 17 14"></polyline>
+                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                  </svg>
+                  <span>大组平移轮换</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="dropdown-menu" v-if="showRotateMenu">
+                  <button class="dropdown-item" @click="rotateLeft">
+                    <span>⬅️</span> 向左平移轮换 (第1组移到最右)
+                  </button>
+                  <button class="dropdown-item" @click="rotateRight">
+                    <span>➡️</span> 向右平移轮换 (最右组移到第1组)
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button class="dropdown-item" @click="rotateRowsForward">
+                    <span>↕️</span> 前后排轮换 (第1排移至最后排)
+                  </button>
+                </div>
+              </div>
+
+              <!-- 视角切换：学生视角 vs 老师视角 -->
+              <div class="perspective-toggle-group" style="display:inline-flex;background:var(--gray-100);padding:2px;border-radius:6px;gap:2px;">
+                <button class="btn btn-xs"
+                        :style="perspectiveMode === 'student' ? 'background:#ffffff;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.1);color:var(--primary);' : 'background:transparent;border:none;color:var(--gray-600);'"
+                        @click="perspectiveMode = 'student'"
+                        title="学生视角：讲台在上方/黑板方向，第1排在最前，从学生面向黑板角度排座">
+                  <span>👨‍🎓 学生视角</span>
+                </button>
+                <button class="btn btn-xs"
+                        :style="perspectiveMode === 'teacher' ? 'background:#ffffff;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.1);color:#b45309;' : 'background:transparent;border:none;color:var(--gray-600);'"
+                        @click="perspectiveMode = 'teacher'"
+                        title="老师视角：讲台在下方，老师站在讲台面向全班（第1排离老师最近，左右与老师肉眼视角一致）">
+                  <span>👨‍🏫 老师视角</span>
+                </button>
+              </div>
+            </template>
+
+            <!-- 打卡模式专属控制 -->
+            <template v-else>
+              <button class="btn btn-success btn-sm" @click="markAllCheckin(true)">
+                <span>✓ 全选已到</span>
+              </button>
+              <button class="btn btn-default btn-sm" @click="markAllCheckin(false)">
+                <span>重置打卡</span>
+              </button>
+              <span style="font-size:12px;color:var(--gray-600);margin-left:8px;">
+                打卡进度: <strong>{{ stats.checkinDone }} / {{ stats.seated }}</strong> 人 ({{ stats.seated > 0 ? Math.round(stats.checkinDone / stats.seated * 100) : 0 }}%)
+              </span>
+            </template>
+          </div>
+
+          <!-- 右侧统计数据 -->
+          <div class="toolbar-right">
+            <div class="stats-summary">
+              <span class="stat-tag">全班: <strong>{{ stats.total }}</strong>人</span>
+              <span class="stat-tag">已就座: <strong style="color:var(--primary);">{{ stats.seated }}</strong>人</span>
+              <span class="stat-tag">待就座: <strong style="color:var(--warning);">{{ stats.unseated }}</strong>人</span>
+              <span class="stat-tag">男: <strong>{{ stats.boys }}</strong> / 女: <strong>{{ stats.girls }}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 视角提示条 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-radius:8px;margin-bottom:12px;font-size:12px;"
+             :style="perspectiveMode === 'teacher' ? 'background:#fffbeb;border:1px solid #fde68a;color:#92400e;' : 'background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;'">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-weight:700;padding:2px 6px;border-radius:4px;"
+                  :style="perspectiveMode === 'teacher' ? 'background:#fef3c7;color:#b45309;' : 'background:#dbeafe;color:#1d4ed8;'">
+              {{ perspectiveMode === 'teacher' ? '👨‍🏫 老师视角模式' : '👨‍🎓 学生视角模式' }}
+            </span>
+            <span v-if="perspectiveMode === 'teacher'">
+              <strong>老师站在讲台上面向全班：</strong>第1排在最下方（离老师最近），教室后门在上方；左右大组已为您肉眼所视自动对齐，无需反向思考！
+            </span>
+            <span v-else>
+              <strong>学生坐在座位上面向黑板：</strong>讲台与黑板在正上方，第1排在最上端。
+            </span>
+          </div>
+          <button class="btn btn-default btn-xs" style="background:#ffffff;white-space:nowrap;" @click="perspectiveMode = (perspectiveMode === 'teacher' ? 'student' : 'teacher')">
+            一键切换为{{ perspectiveMode === 'teacher' ? '学生视角' : '老师视角' }} ⇋
+          </button>
+        </div>
+
+        <!-- 选中座位提示条 -->
+        <div v-if="selectedSeat" style="background:#fffbeb;border:1px solid #fde68a;padding:8px 16px;border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:13px;color:#92400e;display:flex;align-items:center;gap:8px;">
+            <span>👉</span>
+            <span v-if="selectedSeat.fromPool">
+              已选中待排学生<strong>【{{ selectedSeat.student.name }}】</strong>，点击上方任意【+空位】即可入座！
+            </span>
+            <span v-else>
+              已选中<strong>【{{ selectedSeat.student.name }}】</strong>(第{{ selectedSeat.r + 1 }}排 第{{ selectedSeat.c + 1 }}列)，点击另一个座位即可调换，或点击空位移入！
+            </span>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <!-- 触屏设备上拖拽不可用，保留一个按钮式的移出入口 -->
+            <button v-if="!selectedSeat.fromPool && !selectedSeat.student.is_locked"
+                    class="btn btn-danger-outline btn-sm"
+                    @click="removeSeatStudent(selectedSeat.r, selectedSeat.c, $event)">移出座位</button>
+            <button class="btn btn-default btn-sm" @click="cancelSelection">取消选择</button>
+          </div>
+        </div>
+
+        <!-- 教室可视化排座主板 (可横向自适应滚动) -->
+        <div class="seating-chart-container" id="seatingCanvasContainer">
+          <!-- 教室顶部标识：学生视角时为讲台/黑板，老师视角时为教室后黑板/后门 -->
+          <div v-if="perspectiveMode === 'student'" class="podium-board">
+            【 讲 台 · 黑 板 方 向 】
+          </div>
+          <div v-else class="podium-board rear-board" style="background:#f1f5f9;border-color:#cbd5e1;color:#64748b;">
+            【 教室后黑板 · 教室后门方向 】
+          </div>
+
+          <!-- 大组指示栏 -->
+          <div class="group-headers" :style="{ marginLeft: '50px' }">
+            <div v-for="g in displayGroupHeaders" :key="g.index" :style="[{ width: (g.colSpan * 86 + (g.colSpan - 1) * 6) + 'px', marginRight: g.marginRight }]" style="display:flex;justify-content:center;">
+              <span class="group-header-label">{{ g.displayName }}</span>
+            </div>
+          </div>
+
+          <!-- 座位网格 (行与列) -->
+          <div class="seats-matrix">
+            <div v-for="rItem in displayRows" :key="rItem.rowIndex" class="seat-row">
+              <!-- 排数标签 -->
+              <span class="row-label">{{ rItem.label }}</span>
+
+              <!-- 列卡片 -->
+              <template v-for="item in rItem.cells" :key="item.c">
+                <!-- 已就座学生卡片 -->
+                <div v-if="item.cell"
+                     class="seat-card"
+                     :class="[
+                       item.cell.gender === '女' ? 'gender-girl' : 'gender-boy',
+                       item.cell.is_locked ? 'seat-locked-card' : '',
+                       selectedSeat && !selectedSeat.fromPool && selectedSeat.r === item.r && selectedSeat.c === item.c ? 'selected-swap' : '',
+                       dragOverCell && dragOverCell.r === item.r && dragOverCell.c === item.c ? 'drag-over' : '',
+                       seatMode === 'checkin' ? 'checkin-mode' : '',
+                       seatMode === 'checkin' && item.cell.is_completed ? 'checkin-done' : ''
+                     ]"
+                     :style="getColMarginStyle(item.visualCol)"
+                     :draggable="seatMode === 'edit' && !item.cell.is_locked"
+                     @dragstart="onDragStartSeat($event, item.r, item.c, item.cell)"
+                     @dragover="onDragOver($event, item.r, item.c)"
+                     @dragleave="onDragLeave(item.r, item.c)"
+                     @drop="onDrop($event, item.r, item.c)"
+                     @dragend="onDragEnd"
+                     @click="handleSeatClick(item.r, item.c)">
+                  
+                  <!-- 卡片顶部：学号、锁按钮、移除按钮 -->
+                  <div class="seat-top">
+                    <span class="student-no">#{{ item.cell.student_no }}</span>
+                    <div class="seat-badges">
+                      <!-- 锁按钮：点击锁定固定此人 -->
+                      <button v-if="seatMode === 'edit'"
+                              class="seat-lock-btn"
+                              :class="{ 'locked': item.cell.is_locked }"
+                              @click.stop="toggleSeatLock(item.r, item.c, $event)"
+                              :title="item.cell.is_locked ? '【已锁定】该座位已固定此人，智能排座与轮换时保持不动（点击解锁）' : '【未锁定】点击锁定固定该学生，智能排座与轮换时保持不动'">
+                        <!-- 已锁定：实心锁 -->
+                        <svg v-if="item.cell.is_locked" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5h-2.2V7a1.8 1.8 0 0 0-3.6 0v3.5H8Z"></path>
+                          <rect x="4" y="10.5" width="16" height="10.5" rx="2.5"></rect>
+                        </svg>
+                        <!-- 未锁定：开锁（锁梁右端悬空） -->
+                        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M8 10.5V7a4 4 0 0 1 8 0"></path>
+                          <rect x="4" y="10.5" width="16" height="10.5" rx="2.5"></rect>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 核心：姓名 -->
+                  <div class="student-name" :title="item.cell.name">{{ item.cell.name }}</div>
+
+                  <!-- 卡片底部：职务标签 / 打卡状态 -->
+                  <div class="seat-bottom">
+                    <template v-if="seatMode === 'checkin'">
+                      <span class="checkin-badge" :class="item.cell.is_completed ? 'done' : 'pending'">
+                        {{ item.cell.is_completed ? '已过关 ✓' : '待打卡' }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span v-if="item.cell.tags" class="student-tag">{{ item.cell.tags }}</span>
+                      <span v-else style="font-size:8px;opacity:0.5;">拖动调位</span>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- 空座位卡片 -->
+                <div v-else
+                     class="seat-card empty-seat"
+                     :class="[
+                       dragOverCell && dragOverCell.r === item.r && dragOverCell.c === item.c ? 'drag-over' : '',
+                       selectedSeat ? 'empty-can-seat' : ''
+                     ]"
+                     :style="getColMarginStyle(item.visualCol)"
+                     @dragover="onDragOver($event, item.r, item.c)"
+                     @dragleave="onDragLeave(item.r, item.c)"
+                     @drop="onDrop($event, item.r, item.c)"
+                     @click="handleSeatClick(item.r, item.c)">
+                  <span class="empty-icon">+</span>
+                  <span class="empty-text">{{ selectedSeat ? '放至此位' : '点选/拖入' }}</span>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- 老师视角时，底部显示讲台/老师站位 -->
+          <div v-if="perspectiveMode === 'teacher'" class="podium-board bottom-podium teacher-podium" style="background:linear-gradient(135deg, #fef3c7, #fde68a);border-color:#f59e0b;color:#92400e;font-weight:700;">
+            【 讲 台 · 老 师 站 位（面 向 全 班 学 生） 】
+          </div>
+
+          <!-- 底部图例栏 -->
+          <div class="legend-bar">
+            <div class="legend-item">
+              <span class="legend-swatch boy"></span>
+              <span>男生座位</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch girl"></span>
+              <span>女生座位</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch empty"></span>
+              <span>空座位 (点击安排)</span>
+            </div>
+            <div class="legend-item" v-if="seatMode === 'checkin'">
+              <span class="legend-swatch done"></span>
+              <span>打卡已过关</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 待安排座位的学生池 (排座模式显示)：把座位上的学生拖到这里即可移出座位 -->
+        <div class="student-pool-card"
+             v-if="seatMode === 'edit'"
+             :class="{ 'pool-drop-active': isDragOverPool }"
+             @dragover="onDragOverPool"
+             @dragleave="onDragLeavePool"
+             @drop="onDropToPool">
+          <div class="pool-header">
+            <div class="pool-title-group">
+              <span class="pool-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                待安排座位的学生池
+              </span>
+              <span class="pool-count-badge" :class="unseatedStudents.length > 0 ? 'has-unseated' : 'all-seated'">
+                {{ unseatedStudents.length > 0 ? `尚有 ${unseatedStudents.length} 人未排座` : '✓ 全员已就座' }}
+              </span>
+              <span class="pool-drop-hint" :class="{ active: isDragOverPool }">
+                {{ isDragOverPool ? '松手即可移出座位 →' : '把座位上的学生拖到此处可移出座位' }}
+              </span>
+            </div>
+
+            <button v-if="unseatedStudents.length > 0" class="btn btn-outline-primary btn-sm" @click="fillRemainingSeats">
+              <span>一键顺延填补空位</span>
+            </button>
+          </div>
+
+          <!-- 学生池标签 -->
+          <div class="pool-students-list" v-if="unseatedStudents.length > 0">
+            <div v-for="s in unseatedStudents" :key="s.id"
+                 class="pool-student-pill"
+                 :class="{ selected: selectedSeat && selectedSeat.fromPool && selectedSeat.student.id === s.id }"
+                 draggable="true"
+                 @dragstart="onDragStartPool($event, s)"
+                 @dragend="onDragEnd"
+                 @click="selectPoolStudent(s)"
+                 title="点击选中后点空位入座，或直接拖拽到空位">
+              <span class="gender-dot" :class="s.gender === '女' ? 'girl' : 'boy'"></span>
+              <span>{{ s.name }}</span>
+              <span style="font-size:10px;color:var(--gray-400);font-family:monospace;">#{{ s.student_no }}</span>
+            </div>
+          </div>
+          <div v-else style="font-size:12px;color:var(--success);font-weight:600;padding:6px 0;">
+            🎉 全班 {{ currentClass.students.length }} 名学生已全部就座，无遗漏未排学生！
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= 视图 2: 班级花名册 ================= -->
+      <div v-show="activeTab === 'roster'" class="roster-card">
+        <div class="roster-toolbar">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div class="search-input-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" class="form-input" v-model="rosterSearch" placeholder="搜索姓名、学号、职务...">
+            </div>
+            <span style="font-size:12px;color:var(--gray-500);">
+              共 <strong>{{ filteredRoster.length }}</strong> 名学生
+            </span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" @click="openAddStudentModal">
+              <span>+ 添加学生</span>
+            </button>
+            <button class="btn btn-default btn-sm" @click="openBatchAddModal">
+              <span>批量粘贴录入</span>
+            </button>
+            <button class="btn btn-default btn-sm" @click="triggerImportExcel">
+              <span>导入Excel花名册</span>
+            </button>
+            <button class="btn btn-default btn-sm" @click="exportToExcel">
+              <span>导出花名册Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 花名册表格 -->
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:60px;">学号</th>
+                <th>姓名</th>
+                <th style="width:80px;">性别</th>
+                <th>职务/标签</th>
+                <th>座位状态</th>
+                <th>备注</th>
+                <th style="width:120px;text-align:right;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in filteredRoster" :key="s.id">
+                <td style="font-family:monospace;font-weight:700;">#{{ s.student_no }}</td>
+                <td style="font-weight:700;color:var(--gray-900);">{{ s.name }}</td>
+                <td>
+                  <span :style="{ color: s.gender === '女' ? 'var(--girl-dot)' : 'var(--boy-dot)', fontWeight: '600' }">
+                    {{ s.gender }}
+                  </span>
+                </td>
+                <td>
+                  <span v-if="s.tags" class="student-tag">{{ s.tags }}</span>
+                  <span v-else style="color:var(--gray-300);">-</span>
+                </td>
+                <td>
+                  <span v-if="seatedStudentsList.some(item => item.student.student_id === s.id)" style="color:var(--success);font-weight:600;font-size:11px;">
+                    已排座 (第{{ (seatedStudentsList.find(item => item.student.student_id === s.id).r + 1) }}排第{{ (seatedStudentsList.find(item => item.student.student_id === s.id).c + 1) }}列)
+                  </span>
+                  <span v-else style="color:var(--warning);font-weight:600;font-size:11px;">
+                    待排座池
+                  </span>
+                </td>
+                <td style="color:var(--gray-500);font-size:12px;">{{ s.remark || '-' }}</td>
+                <td style="text-align:right;">
+                  <button class="btn btn-default btn-sm" @click="openEditStudentModal(s)" style="padding:2px 8px;margin-right:4px;">编辑</button>
+                  <button class="btn btn-danger-outline btn-sm" @click="deleteStudent(s.id)" style="padding:2px 8px;">删除</button>
+                </td>
+              </tr>
+              <tr v-if="filteredRoster.length === 0">
+                <td colspan="7" style="text-align:center;color:var(--gray-400);padding:30px;">未搜索到匹配学生</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ================= 视图 3: 课堂抽选点名 ================= -->
+      <div v-show="activeTab === 'picker'" class="picker-container">
+        <div class="picker-card">
+          <h2 style="font-size:18px;font-weight:700;margin-bottom:6px;color:var(--gray-900);">🎲 课堂随机幸运抽签</h2>
+          <p style="font-size:12px;color:var(--gray-400);margin-bottom:20px;">大屏互动 · 公平公正抽选学生回答问题</p>
+
+          <div class="picker-display">
+            <div v-if="pickerState.candidate" class="picker-candidate-name">
+              {{ pickerState.candidate.name }}
+            </div>
+            <div v-else style="font-size:26px;color:var(--gray-400);font-weight:600;">
+              准备就绪
+            </div>
+            <div v-if="pickerState.candidate" class="picker-candidate-meta">
+              学号：#{{ pickerState.candidate.student_no }} · {{ pickerState.candidate.gender }}
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px;">
+            <button class="btn btn-primary" style="padding:12px 32px;font-size:15px;" @click="startRandomPicker">
+              {{ pickerState.running ? '⏹ 停止抽选' : '🎲 开始抽选' }}
+            </button>
+          </div>
+
+          <div style="font-size:12px;color:var(--gray-500);display:flex;align-items:center;justify-content:center;gap:8px;">
+            <label style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <input type="checkbox" v-model="pickerState.onlySeated">
+              <span>仅在当前已就座学生中抽选</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 历史抽选记录 -->
+        <div v-if="pickerState.history.length > 0" style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:16px;text-align:left;">
+          <h4 style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">抽选历史记录：</h4>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span v-for="(h, idx) in pickerState.history" :key="idx" style="font-size:11px;background:var(--gray-100);padding:3px 8px;border-radius:999px;">
+              {{ h.student.name }} ({{ h.time }})
+            </span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ================= 弹窗: 排座规格设置 ================= -->
+    <div class="modal-overlay" v-if="showLayoutModal" @click.self="showLayoutModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            教室排座规格设置
+          </h3>
+          <button class="modal-close" @click="showLayoutModal = false">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <label class="form-label">一键切换常用教室布局预设：</label>
+          <div class="layout-presets-grid">
+            <div v-for="p in layoutPresets" :key="p.name"
+                 class="preset-card"
+                 :class="{ active: rowsCount === p.rows && colsCount === p.cols && currentLayoutMode === p.mode }"
+                 @click="applyPreset(p)">
+              <div class="preset-name">{{ p.name }}</div>
+              <div class="preset-desc">{{ p.desc }}</div>
+            </div>
+          </div>
+
+          <label class="form-label" style="margin-top:14px;">微调排数与列数：</label>
+          <div class="stepper-box">
+            <span class="stepper-label">排数 (行)：</span>
+            <div class="stepper-controls">
+              <button class="stepper-btn" @click="adjustRows(-1)">-</button>
+              <span class="stepper-value">{{ rowsCount }} 排</span>
+              <button class="stepper-btn" @click="adjustRows(1)">+</button>
+            </div>
+          </div>
+
+          <div class="stepper-box">
+            <span class="stepper-label">列数 (列)：</span>
+            <div class="stepper-controls">
+              <button class="stepper-btn" @click="adjustCols(-1)">-</button>
+              <span class="stepper-value">{{ colsCount }} 列</span>
+              <button class="stepper-btn" @click="adjustCols(1)">+</button>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top:10px;">
+            <label class="form-label">过道与同桌组织形式：</label>
+            <select class="form-select" v-model="currentClass.layout_mode" @change="saveToStorage()">
+              <option value="double">双人同桌 (两列一大组带过道，如 2+2+2+2)</option>
+              <option value="single">单人单桌 (每列均留走道，适合考试)</option>
+              <option value="triple">三人同桌 (三列一大组)</option>
+              <option value="grid">均等对称网格 (无大走道)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-primary" @click="showLayoutModal = false">完成设置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 弹窗: 点击空位安排学生入座 ================= -->
+    <div class="modal-overlay" v-if="showAssignModal" @click.self="showAssignModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>安排学生入座</h3>
+          <button class="modal-close" @click="showAssignModal = false">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px;" v-if="assignTarget">
+            目标位置：第 <strong>{{ assignTarget.r + 1 }}</strong> 排 第 <strong>{{ assignTarget.c + 1 }}</strong> 列
+          </div>
+
+          <div class="form-group">
+            <input type="text" class="form-input" v-model="assignSearch" placeholder="输入姓名或学号搜索...">
+          </div>
+
+          <!-- 待排座学生列表 -->
+          <div style="margin-bottom:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px;display:flex;justify-content:space-between;">
+              <span>待安排座位的学生 ({{ filteredAssignUnseated.length }})</span>
+              <span style="color:var(--primary);font-size:11px;">点击即可入座</span>
+            </div>
+            <div style="max-height:160px;overflow-y:auto;display:flex;flex-wrap:gap;gap:6px;flex-direction:column;">
+              <div v-for="s in filteredAssignUnseated" :key="s.id"
+                   @click="assignStudentToTarget(s)"
+                   style="padding:8px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.15s;"
+                   onmouseover="this.style.background='#eef2ff';this.style.borderColor='#a5b4fc'"
+                   onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e2e8f0'">
+                <div>
+                  <span style="font-weight:700;font-size:13px;color:var(--gray-800);">{{ s.name }}</span>
+                  <span style="font-size:11px;color:var(--gray-400);margin-left:6px;font-family:monospace;">#{{ s.student_no }}</span>
+                </div>
+                <span style="font-size:11px;color:var(--primary);font-weight:600;">安排入座 ➔</span>
+              </div>
+              <div v-if="filteredAssignUnseated.length === 0" style="font-size:12px;color:var(--gray-400);text-align:center;padding:12px;">
+                暂无待排学生
+              </div>
+            </div>
+          </div>
+
+          <!-- 其他已就座学生列表 (用于换座) -->
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
+              其他已就座学生 (调动至此位，原座变为空位)
+            </div>
+            <div style="max-height:140px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+              <div v-for="item in filteredAssignSeated" :key="item.student.student_id"
+                   @click="assignStudentToTarget(item.student, { r: item.r, c: item.c })"
+                   style="padding:8px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all 0.15s;"
+                   onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8'"
+                   onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e2e8f0'">
+                <div>
+                  <span style="font-weight:700;font-size:13px;color:var(--gray-800);">{{ item.student.name }}</span>
+                  <span style="font-size:11px;color:var(--gray-400);margin-left:6px;">现座: 第{{ item.r + 1 }}排第{{ item.c + 1 }}列</span>
+                </div>
+                <span style="font-size:11px;color:var(--warning);font-weight:600;">调动至此位 ➔</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-default" @click="showAssignModal = false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 弹窗: 添加/编辑单个学生 ================= -->
+    <div class="modal-overlay" v-if="showStudentModal" @click.self="showStudentModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ studentModalMode === 'add' ? '添加学生' : '编辑学生信息' }}</h3>
+          <button class="modal-close" @click="showStudentModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">学号：</label>
+            <input type="text" class="form-input" v-model="studentForm.student_no" placeholder="如 01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">姓名：</label>
+            <input type="text" class="form-input" v-model="studentForm.name" placeholder="请输入姓名">
+          </div>
+          <div class="form-group">
+            <label class="form-label">性别：</label>
+            <select class="form-select" v-model="studentForm.gender">
+              <option value="男">男</option>
+              <option value="女">女</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">职务/标签 (选填)：</label>
+            <input type="text" class="form-input" v-model="studentForm.tags" placeholder="如：班长、组长、课代表">
+          </div>
+          <div class="form-group">
+            <label class="form-label">备注 (选填)：</label>
+            <input type="text" class="form-input" v-model="studentForm.remark" placeholder="如：视力矫正、特殊情况等">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-default" @click="showStudentModal = false">取消</button>
+          <button class="btn btn-primary" @click="saveStudentModal">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 弹窗: 批量粘贴录入学生 ================= -->
+    <div class="modal-overlay" v-if="showBatchAddModal" @click.self="showBatchAddModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>批量粘贴录入学生名单</h3>
+          <button class="modal-close" @click="showBatchAddModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="input-hint" style="margin-bottom:8px;">
+            每行一个学生。支持直接从微信、Excel或记事本复制。格式支持：<br>
+            • <code>王小明</code> (自动编号并默认性别)<br>
+            • <code>01 李小花 女</code><br>
+            • <code>张小刚 男</code>
+          </div>
+          <textarea class="form-textarea" v-model="batchAddText" placeholder="在此粘贴学生名单，每行一个..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-default" @click="showBatchAddModal = false">取消</button>
+          <button class="btn btn-primary" @click="parseBatchAdd">开始录入</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 弹窗: 新建/编辑班级 ================= -->
+    <div class="modal-overlay" v-if="showClassModal" @click.self="showClassModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>{{ classModalMode === 'create' ? '新建班级' : '编辑班级信息' }}</h3>
+          <button class="modal-close" @click="showClassModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">班级全称：</label>
+            <input type="text" class="form-input" v-model="classForm.name" placeholder="如：三年级(2)班">
+          </div>
+          <div class="form-group">
+            <label class="form-label">年级：</label>
+            <input type="text" class="form-input" v-model="classForm.grade" placeholder="如：三年级">
+          </div>
+          <div class="form-group">
+            <label class="form-label">学科：</label>
+            <input type="text" class="form-input" v-model="classForm.subject" placeholder="如：语文">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button v-if="classModalMode === 'edit'" class="btn btn-danger-outline" style="margin-right:auto;" @click="deleteCurrentClass(); showClassModal = false;">删除班级</button>
+          <button class="btn btn-default" @click="showClassModal = false">取消</button>
+          <button class="btn btn-primary" @click="saveClassModal">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 弹窗: 班级历史记录备份管理 ================= -->
+    <div class="modal-overlay" v-if="showHistoryModal" @click.self="showHistoryModal = false">
+      <div class="modal-content modal-lg">
+        <div class="modal-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 8v4l3 3"></path>
+              <circle cx="12" cy="12" r="9"></circle>
+            </svg>
+            <h3 style="margin:0;">班级历史排座备份管理</h3>
+          </div>
+          <button class="modal-close" @click="showHistoryModal = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <!-- 顶部操作条：新建当前快照与导入导出 -->
+          <div class="backup-toolbar">
+            <div class="backup-input-group">
+              <input type="text"
+                     class="form-input"
+                     style="padding:6px 12px;font-size:13px;"
+                     v-model="backupNoteInput"
+                     placeholder="输入快照备注（如：第4周换座方案 / 期中考后调整）"
+                     @keyup.enter="createHistoryBackup()">
+              <button class="btn btn-primary btn-sm" @click="createHistoryBackup()" style="white-space:nowrap;">
+                <span>+ 存为新快照</span>
+              </button>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button class="btn btn-default btn-sm" @click="exportAllHistoryBackups" title="将所有历史快照导出为一个JSON文件">
+                <span>💾 导出全部快照</span>
+              </button>
+              <button class="btn btn-default btn-sm" @click="importHistoryBackupsFile" title="从JSON文件导入历史快照">
+                <span>📂 导入快照</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 快照列表容器 -->
+          <div class="backup-list-container">
+            <div v-if="historyBackups.length === 0" style="text-align:center;padding:36px 0;color:var(--gray-400);">
+              <div style="font-size:32px;margin-bottom:8px;">📭</div>
+              <p style="margin:0;font-size:13px;">暂无历史排座记录，点击上方【+ 存为新快照】即可保存当前排座方案</p>
+            </div>
+
+            <div v-for="item in historyBackups" :key="item.id" class="backup-item-card">
+              <div class="backup-item-info">
+                <div class="backup-item-title">
+                  <span>{{ item.name }}</span>
+                  <button class="btn btn-link btn-xs" style="color:var(--gray-500);padding:0 4px;font-size:12px;" @click="renameHistoryBackup(item)" title="修改备注名称">✎</button>
+                </div>
+                <div class="backup-item-meta">
+                  <span class="backup-tag">🏫 {{ item.className }}</span>
+                  <span>🕒 {{ item.createdAt }}</span>
+                  <span>📐 {{ item.rows }}排 × {{ item.cols }}列</span>
+                  <span v-if="item.stats">👥 已排: {{ item.stats.seated }}/{{ item.stats.total }}人</span>
+                  <span v-if="item.stats && item.stats.locked > 0" style="color:#b45309;font-weight:600;">🔒 固定: {{ item.stats.locked }}人</span>
+                </div>
+              </div>
+              <div class="backup-actions">
+                <button class="btn btn-primary btn-sm" @click="restoreHistoryBackup(item)" title="将当前班级座位恢复为此历史方案">
+                  <span>恢复此排座</span>
+                </button>
+                <button class="btn btn-default btn-sm" @click="exportSingleBackup(item)" title="单独导出此备份文件">
+                  <span>导出</span>
+                </button>
+                <button class="btn btn-danger-outline btn-sm" @click="deleteHistoryBackup(item.id)" title="删除此条历史记录">
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content:space-between;">
+          <div style="font-size:12px;color:var(--gray-500);">
+            共 <strong>{{ historyBackups.length }}</strong> 条历史快照，随时可恢复、单独导出或删除。
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button v-if="historyBackups.length > 0" class="btn btn-danger-outline btn-sm" @click="clearAllHistoryBackups">清空历史记录</button>
+            <button class="btn btn-default btn-sm" @click="showHistoryModal = false">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

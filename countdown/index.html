@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>创意倒计时精选工坊 - 离线全屏多主题合集</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(22, 29, 47, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f0f4f8;
+      --subtext: #8e9aaf;
+      --accent: #4f46e5;
+    }
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.18) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 50%, rgba(14, 165, 233, 0.12) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      padding: 40px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 顶部标题区 */
+    header {
+      text-align: center;
+      max-width: 780px;
+      margin-bottom: 36px;
+    }
+    h1 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p.subtitle {
+      font-size: 15px;
+      color: var(--subtext);
+      line-height: 1.6;
+    }
+
+    /* 卡片网格 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    /* 单个倒计时卡片 */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: var(--card-accent, #4f46e5);
+      opacity: 0.8;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-icon {
+      font-size: 32px;
+    }
+    .tag {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      letter-spacing: 1px;
+    }
+
+    .card-body h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .card-body p {
+      font-size: 13px;
+      color: var(--subtext);
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .features-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+    .feature-chip {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #94a3b8;
+    }
+
+    /* 各卡片专属色彩主题 */
+    .card-cyber { --card-accent: linear-gradient(90deg, #00f0ff, #ff003c); }
+    .card-zen { --card-accent: linear-gradient(90deg, #d4af37, #e4c590); }
+    .card-space { --card-accent: linear-gradient(90deg, #ff7700, #00d2ff); }
+    .card-flip { --card-accent: linear-gradient(90deg, #e59866, #d4a373); }
+    .card-wall { --card-accent: linear-gradient(90deg, #d4af37, #f39c12); }
+    .card-milestone { --card-accent: linear-gradient(90deg, #ff4757, #ffa502); }
+    .card-bomb { --card-accent: linear-gradient(90deg, #ff1e27, #f1c40f); }
+    .card-worker { --card-accent: linear-gradient(90deg, #38ef7d, #11998e); }
+
+    /* 底部通用说明与快捷键 */
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      line-height: 1.8;
+      max-width: 600px;
+    }
+    .kbd-tag {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>创意倒计时精选工坊</h1>
+    <p class="subtitle">
+      精选 8 种独具特色与创意的倒计时风格。每一个页面均无任何外部 CDN 依赖，双击即可在任何离线浏览器中启动，内置纯代码合成音效与震撼的全屏粒子视觉。
+    </p>
+  </header>
+
+  <div class="grid">
+    <!-- 1. 赛博朋克 HUD -->
+    <a href="pages/cyberpunk.html" class="card card-cyber">
+      <div class="card-head">
+        <span class="card-icon">⚡</span>
+        <span class="tag">黑客科幻</span>
+      </div>
+      <div class="card-body">
+        <h3>赛博朋克 HUD 倒计时</h3>
+        <p>全息雷达扫描粒子背景、高能警报霓虹灯、毫秒级数码跳动、倒数高亮脉冲。</p>
+        <div class="features-list">
+          <span class="feature-chip">动态雷达扫描</span>
+          <span class="feature-chip">离线合成警报音</span>
+          <span class="feature-chip">自定义时长</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 2. 禅意沙漏 -->
+    <a href="pages/zen-sandglass.html" class="card card-zen">
+      <div class="card-head">
+        <span class="card-icon">⏳</span>
+        <span class="tag">专注番茄钟</span>
+      </div>
+      <div class="card-body">
+        <h3>禅意流沙沙漏倒计时</h3>
+        <p>逼真物理颗粒流沙掉落与沙丘堆积、沙漏随时一键翻转、内置下雨舒缓白噪音与木鱼声。</p>
+        <div class="features-list">
+          <span class="feature-chip">拟真粒子流沙</span>
+          <span class="feature-chip">轻柔白噪音雨声</span>
+          <span class="feature-chip">清脆木鱼音</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 3. 太空发射 -->
+    <a href="pages/rocket-launch.html" class="card card-space">
+      <div class="card-head">
+        <span class="card-icon">🚀</span>
+        <span class="tag">航天控制台</span>
+      </div>
+      <div class="card-body">
+        <h3>太空发射 T-Minus 倒计时</h3>
+        <p>SpaceX/NASA 控制中心大屏风格，子系统遥测清单，点火尾焰震撼粒子与发射低音轰鸣。</p>
+        <div class="features-list">
+          <span class="feature-chip">T-Minus 倒数哔声</span>
+          <span class="feature-chip">火箭喷射尾焰</span>
+          <span class="feature-chip">升空震撼音效</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 4. 机械翻页钟 -->
+    <a href="pages/flip-clock.html" class="card card-flip">
+      <div class="card-head">
+        <span class="card-icon">⏱</span>
+        <span class="tag">复古拟物</span>
+      </div>
+      <div class="card-body">
+        <h3>复古拟物机械翻页钟</h3>
+        <p>经典 3D 物理机械翻牌动效、清脆拟真翻页卡嗒声、深色暗黑与复古原木双主题自由切换。</p>
+        <div class="features-list">
+          <span class="feature-chip">3D 物理翻转折痕</span>
+          <span class="feature-chip">卡嗒机械音</span>
+          <span class="feature-chip">双主题切换</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 4.5 复古挂钟与钟摆 -->
+    <a href="pages/wall-clock.html" class="card card-wall">
+      <div class="card-head">
+        <span class="card-icon">🕰</span>
+        <span class="tag">机械挂钟 · 新增</span>
+      </div>
+      <div class="card-body">
+        <h3>复古机械挂钟倒计时</h3>
+        <p>逼真皮革黄铜吊挂壁钟、时分秒三针联动、金色扇形剩余时间进度、摇摆钟摆与齿轮滴答声，全屏时按钮隐入底部，鼠标下滑平滑呼出！</p>
+        <div class="features-list">
+          <span class="feature-chip">皮带吊挂/钟摆</span>
+          <span class="feature-chip">扇形剩余时间</span>
+          <span class="feature-chip">全屏下滑呼出</span>
+          <span class="feature-chip">西敏寺报时钟声</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 5. 重大纪念日 -->
+    <a href="pages/milestone-celebrate.html" class="card card-milestone">
+      <div class="card-head">
+        <span class="card-icon">🎉</span>
+        <span class="tag">跨年/高考/纪念日</span>
+      </div>
+      <div class="card-body">
+        <h3>重大里程碑大事件倒计时</h3>
+        <p>天/时/分/秒巨幅大屏卡片展示，支持本地保存自定义目标时间，归零时刻漫天礼炮彩带飞舞。</p>
+        <div class="features-list">
+          <span class="feature-chip">天/时/分/秒</span>
+          <span class="feature-chip">全屏礼炮碎纸</span>
+          <span class="feature-chip">本地配置记忆</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 6. 拆弹危机 -->
+    <a href="pages/defuse-bomb.html" class="card card-bomb">
+      <div class="card-head">
+        <span class="card-icon">💣</span>
+        <span class="tag">解压互动游戏</span>
+      </div>
+      <div class="card-body">
+        <h3>惊险拆弹危机倒计时</h3>
+        <p>C4 定时炸弹仪表盘，随倒数急促加快的心跳声，剪断红蓝黄绿导线解除危机，超时触发爆炸冲击！</p>
+        <div class="features-list">
+          <span class="feature-chip">急促心跳/剪线音</span>
+          <span class="feature-chip">互动剪线拆弹</span>
+          <span class="feature-chip">全屏爆炸冲击波</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- 7. 打工人摸鱼下班 -->
+    <a href="pages/after-work.html" class="card card-worker">
+      <div class="card-head">
+        <span class="card-icon">☕</span>
+        <span class="tag">职场打工人</span>
+      </div>
+      <div class="card-body">
+        <h3>打工人下班 / 摸鱼神器倒计时</h3>
+        <p>实时下班倒数、今日搬砖工资与摸鱼收益计价器、周末倒计时、点击冒出摸鱼泡泡、一键老板键伪装！</p>
+        <div class="features-list">
+          <span class="feature-chip">工资实时计价器</span>
+          <span class="feature-chip">老板键代码伪装</span>
+          <span class="feature-chip">摸鱼气泡金币声</span>
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <footer>
+    <p>💡 全屏使用提示：在任意倒计时页面中，按键盘快捷键 <span class="kbd-tag">F</span> 或点击全屏按钮可进入沉浸全屏模式；</p>
+    <p>全屏下**双击屏幕任何空白处**或按 <span class="kbd-tag">ESC</span> / <span class="kbd-tag">F</span> 即可快速退出全屏；</p>
+    <p>按 <span class="kbd-tag">Space 空格键</span> 暂停/继续，按 <span class="kbd-tag">C</span> 自定义倒计时时长，按 <span class="kbd-tag">R</span> 快速复位，鼠标移至屏幕底边即可唤出控制栏。</p>
+  </footer>
+
+</body>
+</html>

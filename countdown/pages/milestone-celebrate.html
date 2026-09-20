@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>重大纪念日与大事件倒计时 - 离线全屏版</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    :root {
+      --bg-gradient: radial-gradient(circle at center, #1b2838 0%, #0d1117 100%);
+      --accent: #ff4757;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text: #ffffff;
+      --subtext: #8b949e;
+    }
+    body {
+      background: var(--bg-gradient);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* 纸屑与烟花画布 */
+    #fxCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    /* 顶部导航 */
+    .top-header {
+      position: absolute;
+      top: 24px;
+      left: 32px;
+      right: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+    .back-btn {
+      color: var(--subtext);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    /* 事件标题展示 */
+    .event-info {
+      text-align: center;
+      margin-bottom: 28px;
+      z-index: 10;
+    }
+    .event-title {
+      font-size: clamp(28px, 5vw, 56px);
+      font-weight: 800;
+      letter-spacing: 4px;
+      background: linear-gradient(135deg, #ffffff 40%, #ff7675 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .edit-icon {
+      font-size: 18px;
+      -webkit-text-fill-color: var(--subtext);
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .event-title:hover .edit-icon {
+      opacity: 1;
+    }
+
+    /* 里程碑任务名输入条 */
+    .milestone-task-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      padding: 6px 18px;
+      backdrop-filter: blur(12px);
+      transition: all 0.25s ease;
+    }
+    .milestone-task-bar:focus-within {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #ff4757;
+      box-shadow: 0 0 16px rgba(255, 71, 87, 0.35);
+    }
+    .milestone-task-tag {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ffa502;
+    }
+    .milestone-task-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: clamp(15px, 2vw, 22px);
+      font-weight: 800;
+      text-align: center;
+      min-width: 180px;
+      max-width: 360px;
+      letter-spacing: 1px;
+      font-family: inherit;
+    }
+    .milestone-task-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+      font-weight: normal;
+      font-size: 14px;
+    }
+    .milestone-date-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .milestone-date-btn:hover {
+      background: #ff4757;
+      border-color: #ff4757;
+    }
+    .target-date-label {
+      font-size: 14px;
+      color: var(--subtext);
+      letter-spacing: 2px;
+    }
+
+    /* 倒计时四大天王卡片组 (天/时/分/秒) */
+    .cards-grid {
+      display: flex;
+      gap: clamp(10px, 2vw, 24px);
+      z-index: 10;
+      max-width: 90vw;
+    }
+    .time-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: clamp(16px, 3vw, 36px) clamp(16px, 3vw, 32px);
+      min-width: clamp(75px, 18vw, 170px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .time-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .time-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ff4757, #ffa502);
+      opacity: 0.8;
+    }
+    .time-val {
+      font-size: clamp(42px, 8vw, 92px);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      font-family: 'Consolas', monospace;
+      color: #fff;
+    }
+    .time-lbl {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--subtext);
+      margin-top: 12px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* 底部悬浮控制台 */
+    .bottom-bar {
+      position: absolute;
+      bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(18, 24, 34, 0.85);
+      backdrop-filter: blur(16px);
+      padding: 10px 24px;
+      border-radius: 30px;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      z-index: 30;
+      transition: opacity 0.3s;
+      max-width: 96vw;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .bottom-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .bottom-bar.autohide {
+      opacity: 0.15;
+    }
+    .bottom-bar:hover, .bottom-bar.autohide:hover {
+      opacity: 1;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: scale(1.04);
+    }
+    button.primary {
+      background: #ff4757;
+      border-color: #ff4757;
+      color: #fff;
+      font-weight: bold;
+    }
+
+    /* 编辑弹窗 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-box {
+      background: #1e2634;
+      border: 1px solid var(--card-border);
+      padding: 30px;
+      border-radius: 12px;
+      width: 380px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    }
+    .modal-box h3 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      letter-spacing: 1px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--subtext);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: #0d1117;
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      font-family: inherit;
+    }
+    .form-group input:focus {
+      border-color: #ff4757;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="fxCanvas"></canvas>
+
+  <div class="top-header">
+    <a href="../index.html" class="back-btn">← 大厅主页</a>
+    <div style="font-size: 12px; color: var(--subtext); letter-spacing: 2px;">MILESTONE EVENT TRACKER</div>
+  </div>
+
+  <div class="event-info">
+    <div class="milestone-task-bar">
+      <span class="milestone-task-tag">🎯 目标任务:</span>
+      <input type="text" id="taskInput" class="milestone-task-input" placeholder="输入目标任务 / 里程碑名称..." maxlength="40" spellcheck="false" autocomplete="off">
+      <button class="milestone-date-btn" onclick="openEditModal()" title="设置目标日期时间">📅 设置日期</button>
+    </div>
+    <div class="target-date-label" id="targetDateLabel">目标时刻：2027-01-01 00:00:00</div>
+  </div>
+
+  <div class="cards-grid">
+    <div class="time-card" id="cardDays">
+      <div class="time-val" id="valDays">000</div>
+      <div class="time-lbl">天数 DAYS</div>
+    </div>
+    <div class="time-card" id="cardHours">
+      <div class="time-val" id="valHours">00</div>
+      <div class="time-lbl">小时 HOURS</div>
+    </div>
+    <div class="time-card">
+      <div class="time-val" id="valMinutes">00</div>
+      <div class="time-lbl">分钟 MINS</div>
+    </div>
+    <div class="time-card">
+      <div class="time-val" id="valSeconds">00</div>
+      <div class="time-lbl">秒数 SECS</div>
+    </div>
+  </div>
+
+  <!-- 底部操作条 -->
+  <div class="bottom-bar" id="controlsBar">
+    <button class="primary" onclick="openEditModal()">⚙ 自定义事件与日期</button>
+    <button onclick="setQuickEvent('高考冲刺', '2027-06-07T09:00:00')">📚 高考倒计时</button>
+    <button onclick="setQuickEvent('2027跨年元旦', '2027-01-01T00:00:00')">🎉 跨年倒计时</button>
+    <button onclick="setQuickEvent('下半年冲刺 (100天后)', getNDaysLater(100))">🎯 百日誓师</button>
+    <button onclick="triggerConfettiBurst()">✨ 礼炮试放</button>
+    <button id="btnFullscreen">⛶ 全屏 (F)</button>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+      <h3>自定义目标事件</h3>
+      <div class="form-group">
+        <label>事件名称</label>
+        <input type="text" id="inputEventName" placeholder="例如：我的25岁生日 / 产品上线">
+      </div>
+      <div class="form-group">
+        <label>目标日期与时间</label>
+        <input type="datetime-local" id="inputEventDate">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button onclick="closeEditModal()">取消</button>
+        <button class="primary" onclick="saveEvent()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       纯离线 Web Audio 礼炮爆炸与胜利音效合成
+       ========================================================== */
+    class CelebrationAudio {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+      }
+      playCanonBurst() {
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+
+        // 低音爆炸冲击
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.5);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+
+        // 高音号角音
+        const chords = [523.25, 659.25, 783.99, 1046.50];
+        chords.forEach((freq, idx) => {
+          const o = this.ctx.createOscillator();
+          const g = this.ctx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(freq, now + 0.05 * idx);
+          g.gain.setValueAtTime(0.1, now + 0.05 * idx);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+          o.connect(g);
+          g.connect(this.ctx.destination);
+          o.start(now + 0.05 * idx);
+          o.stop(now + 1.3);
+        });
+      }
+    }
+
+    const sound = new CelebrationAudio();
+
+    /* ==========================================================
+       倒计时与本地存储数据维护
+       ========================================================== */
+    const STORAGE_KEY = 'milestone_countdown_data_v1';
+    let currentEvent = {
+      name: '2027 新年元旦跨年',
+      targetTime: new Date('2027-01-01T00:00:00').getTime()
+    };
+
+    function loadSavedEvent() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.name && parsed.targetTime) {
+            currentEvent = parsed;
+          }
+        }
+      } catch (e) {}
+    }
+
+    function saveEventToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentEvent));
+      } catch (e) {}
+    }
+
+    loadSavedEvent();
+
+    const taskInput = document.getElementById('taskInput');
+    const elTargetLabel = document.getElementById('targetDateLabel');
+    const elDays = document.getElementById('valDays');
+    const elHours = document.getElementById('valHours');
+    const elMinutes = document.getElementById('valMinutes');
+    const elSeconds = document.getElementById('valSeconds');
+
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function updateCountdown() {
+      const now = Date.now();
+      const diff = currentEvent.targetTime - now;
+
+      if (document.activeElement !== taskInput) {
+        taskInput.value = currentEvent.name;
+      }
+      const d = new Date(currentEvent.targetTime);
+      elTargetLabel.textContent = `目标时刻：${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+
+      if (diff <= 0) {
+        elDays.textContent = '00';
+        elHours.textContent = '00';
+        elMinutes.textContent = '00';
+        elSeconds.textContent = '00';
+        return;
+      }
+
+      const totalSec = Math.floor(diff / 1000);
+      const days = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const minutes = Math.floor((totalSec % 3600) / 60);
+      const seconds = totalSec % 60;
+
+      const cardDays = document.getElementById('cardDays');
+      const cardHours = document.getElementById('cardHours');
+      if (cardDays) cardDays.style.display = days > 0 ? 'flex' : 'none';
+      if (cardHours) cardHours.style.display = (days > 0 || hours > 0) ? 'flex' : 'none';
+
+      elDays.textContent = days < 100 ? pad2(days) : days;
+      elHours.textContent = pad2(hours);
+      elMinutes.textContent = pad2(minutes);
+      elSeconds.textContent = pad2(seconds);
+    }
+
+    setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    /* ==========================================================
+       快捷预设与弹窗逻辑
+       ========================================================== */
+    function getNDaysLater(n) {
+      const d = new Date();
+      d.setDate(d.getDate() + n);
+      return d.toISOString().substring(0, 19);
+    }
+
+    function setQuickEvent(name, dateStr) {
+      currentEvent.name = name;
+      currentEvent.targetTime = new Date(dateStr).getTime();
+      saveEventToStorage();
+      updateCountdown();
+      triggerConfettiBurst();
+    }
+
+    const editModal = document.getElementById('editModal');
+    const inputName = document.getElementById('inputEventName');
+    const inputDate = document.getElementById('inputEventDate');
+
+    function openEditModal() {
+      inputName.value = currentEvent.name;
+      const dt = new Date(currentEvent.targetTime);
+      // 转换为 local YYYY-MM-DDTHH:mm
+      const y = dt.getFullYear();
+      const m = pad2(dt.getMonth() + 1);
+      const day = pad2(dt.getDate());
+      const h = pad2(dt.getHours());
+      const min = pad2(dt.getMinutes());
+      inputDate.value = `${y}-${m}-${day}T${h}:${min}`;
+      editModal.classList.add('open');
+    }
+
+    function closeEditModal() {
+      editModal.classList.remove('open');
+    }
+
+    function saveEvent() {
+      if (inputName.value.trim() && inputDate.value) {
+        currentEvent.name = inputName.value.trim();
+        currentEvent.targetTime = new Date(inputDate.value).getTime();
+        saveEventToStorage();
+        updateCountdown();
+        closeEditModal();
+        triggerConfettiBurst();
+      }
+    }
+
+    /* ==========================================================
+       五彩碎纸粒子与烟花爆炸物理系统 (Canvas 离线渲染)
+       ========================================================== */
+    const canvas = document.getElementById('fxCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let confettis = [];
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const COLORS = ['#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#9b59b6', '#ffffff'];
+
+    function triggerConfettiBurst() {
+      sound.playCanonBurst();
+      for (let i = 0; i < 160; i++) {
+        confettis.push({
+          x: width * 0.5 + (Math.random() - 0.5) * 200,
+          y: height * 0.6,
+          vx: (Math.random() - 0.5) * 18,
+          vy: -Math.random() * 18 - 8,
+          rotation: Math.random() * 360,
+          rotSpeed: (Math.random() - 0.5) * 10,
+          size: Math.random() * 10 + 6,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          alpha: 1,
+          gravity: 0.35,
+          friction: 0.98
+        });
+      }
+    }
+
+    function renderFX() {
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = confettis.length - 1; i >= 0; i--) {
+        const c = confettis[i];
+        c.x += c.vx;
+        c.y += c.vy;
+        c.vy += c.gravity;
+        c.vx *= c.friction;
+        c.rotation += c.rotSpeed;
+        c.alpha -= 0.005;
+
+        if (c.y > height || c.alpha <= 0) {
+          confettis.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.rotate((c.rotation * Math.PI) / 180);
+        ctx.globalAlpha = Math.max(0, c.alpha);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.6);
+        ctx.restore();
+      }
+
+      requestAnimationFrame(renderFX);
+    }
+    renderFX();
+
+    /* ==========================================================
+       全屏与交互
+       ========================================================== */
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    function toggleFs() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    btnFullscreen.addEventListener('click', toggleFs);
+
+    document.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button, a, input, select, textarea, .modal-box')) return;
+      toggleFs();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.target.id === 'taskInput' && e.key === 'Enter') e.target.blur();
+        return;
+      }
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFs();
+      }
+    });
+
+    // 自定义任务名持久化与交互
+    taskInput.addEventListener('input', () => {
+      currentEvent.name = taskInput.value;
+      saveEventToStorage();
+    });
+    taskInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') taskInput.blur();
+    });
+
+    const controlsBar = document.getElementById('controlsBar');
+    let timerId = null;
+    window.addEventListener('mousemove', () => {
+      controlsBar.classList.remove('autohide');
+      clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        controlsBar.classList.add('autohide');
+      }, 4000);
+    });
+  </script>
+</body>
+</html>

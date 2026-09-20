@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>禅意沙漏 / 极简流沙倒计时 - 离线全屏版</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    :root {
+      --bg: #141416;
+      --text: #e6e6e6;
+      --subtext: #888890;
+      --accent: #d4af37; /* 沉稳金色 */
+      --sand: #e4c590;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* 顶部微小导航 */
+    .top-bar {
+      position: absolute;
+      top: 24px;
+      left: 32px;
+      right: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+    }
+    .back-btn {
+      color: var(--subtext);
+      text-decoration: none;
+      font-size: 14px;
+      letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover {
+      color: var(--text);
+    }
+    .status-text {
+      font-size: 13px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--subtext);
+    }
+
+    /* 中央沙漏与数字区容器 */
+    .zen-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      z-index: 10;
+    }
+
+    /* 沙漏画布 */
+    .canvas-box {
+      position: relative;
+      width: 220px;
+      height: 320px;
+      cursor: pointer;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .canvas-box.flipping {
+      transform: rotate(180deg);
+    }
+    #sandCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 大时间显示 */
+    .time-display {
+      font-size: clamp(48px, 9vw, 92px);
+      font-weight: 200;
+      letter-spacing: 6px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      text-align: center;
+      margin-top: 10px;
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+    }
+    .zen-quote {
+      font-size: 14px;
+      letter-spacing: 3px;
+      color: var(--subtext);
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    /* 底部悬浮控制台 */
+    .zen-controls {
+      position: absolute;
+      bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(30, 30, 34, 0.7);
+      backdrop-filter: blur(16px);
+      padding: 10px 24px;
+      border-radius: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 30;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      max-width: 96vw;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .zen-controls::-webkit-scrollbar {
+      display: none;
+    }
+    .zen-controls.autohide {
+      opacity: 0.1;
+    }
+    .zen-controls:hover, .zen-controls.autohide:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text);
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-family: inherit;
+    }
+    button:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: scale(1.04);
+    }
+    button:active {
+      transform: scale(0.96);
+    }
+    button.primary {
+      background: var(--accent);
+      color: #111;
+      border-color: var(--accent);
+      font-weight: 500;
+    }
+    button.primary:hover {
+      background: #e5be49;
+    }
+
+    /* 预设切换 */
+    .presets {
+      display: flex;
+      gap: 8px;
+    }
+    .p-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-color: transparent;
+      color: var(--subtext);
+    }
+    .p-btn.active, .p-btn:hover {
+      color: var(--accent);
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    /* 快捷键提示 */
+    .hints {
+      position: absolute;
+      bottom: 12px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 1px;
+    }
+
+    /* 倒计时完成提示弹层 */
+    .finish-notice {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    .finish-notice.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .finish-notice h2 {
+      font-size: 38px;
+      font-weight: 300;
+      letter-spacing: 6px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .finish-notice p {
+      color: var(--subtext);
+      font-size: 16px;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+    /* 自定义弹窗 */
+    .zen-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 120;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .zen-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .zen-modal-card {
+      background: #1e1e22;
+      border: 1px solid var(--accent);
+      padding: 26px 32px;
+      border-radius: 16px;
+      text-align: center;
+      width: 380px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+    }
+    .zen-modal-title {
+      font-size: 16px;
+      letter-spacing: 2px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+    .zen-input-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .zen-input-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .zen-input-col input {
+      width: 75px;
+      height: 46px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 22px;
+      text-align: center;
+      outline: none;
+      font-family: inherit;
+    }
+    .zen-input-col input:focus {
+      border-color: var(--accent);
+    }
+    .zen-input-col span {
+      font-size: 11px;
+      color: var(--subtext);
+    }
+
+    /* 自定义专注任务名输入条 */
+    .zen-task-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: -4px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 5px 16px;
+      backdrop-filter: blur(8px);
+      transition: all 0.3s ease;
+      z-index: 15;
+    }
+    .zen-task-bar:focus-within {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--accent);
+      box-shadow: 0 0 16px rgba(224, 169, 109, 0.25);
+    }
+    .zen-task-icon {
+      font-size: 14px;
+      opacity: 0.8;
+    }
+    .zen-task-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: clamp(13px, 1.5vw, 15px);
+      font-weight: 300;
+      letter-spacing: 2px;
+      text-align: center;
+      min-width: 180px;
+      max-width: 320px;
+      font-family: inherit;
+    }
+    .zen-task-input::placeholder {
+      color: var(--subtext);
+      font-weight: normal;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="../index.html" class="back-btn">← 大厅主页</a>
+    <div class="status-text" id="statusInfo">静心专注 · 沉淀当下</div>
+  </div>
+
+  <div class="zen-container">
+    <!-- 自定义专注任务名 -->
+    <div class="zen-task-bar">
+      <span class="zen-task-icon">🌿</span>
+      <input type="text" id="taskInput" class="zen-task-input" placeholder="输入此刻修心 / 专注任务..." maxlength="40" spellcheck="false" autocomplete="off">
+    </div>
+
+    <!-- 拟真流沙沙漏画布 -->
+    <div class="canvas-box" id="hourglassBox" title="点击可翻转沙漏">
+      <canvas id="sandCanvas" width="440" height="640"></canvas>
+    </div>
+
+    <!-- 数字时间 -->
+    <div class="time-display" id="timeText">25:00</div>
+    <div class="zen-quote" id="quoteText">“流水不争先，争的是滔滔不绝。”</div>
+  </div>
+
+  <!-- 底部控制栏 -->
+  <div class="zen-controls" id="controlsBar">
+    <button class="primary" id="btnPlay">▶ 开始 (Space)</button>
+    <button id="btnFlip">↻ 翻转沙漏</button>
+
+    <div class="presets">
+      <button class="p-btn" onclick="setTimerPreset(300)">5分钟</button>
+      <button class="p-btn" onclick="setTimerPreset(600)">10分钟</button>
+      <button class="p-btn active" onclick="setTimerPreset(1500)">25分(番茄)</button>
+      <button class="p-btn" onclick="setTimerPreset(2700)">45分钟</button>
+    </div>
+
+    <button id="btnCustom">⚙ 自定义</button>
+    <button id="btnSound">🔊 木鱼音效</button>
+    <button id="btnNoise">🌧 白噪音: 关</button>
+    <button id="btnFs">⛶ 全屏 (F)</button>
+  </div>
+
+  <!-- 自定义弹窗 -->
+  <div class="zen-modal-overlay" id="zenModal">
+    <div class="zen-modal-card">
+      <div class="zen-modal-title">自定义专注时长</div>
+      <div class="zen-input-row">
+        <div class="zen-input-col">
+          <input type="number" id="zenInputH" min="0" max="99" value="0">
+          <span>小时</span>
+        </div>
+        <div class="zen-input-col">
+          <input type="number" id="zenInputM" min="0" max="59" value="25">
+          <span>分钟</span>
+        </div>
+        <div class="zen-input-col">
+          <input type="number" id="zenInputS" min="0" max="59" value="0">
+          <span>秒钟</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="primary" id="btnApplyZen" style="padding: 8px 24px;">确定</button>
+        <button onclick="closeZenModal()" style="padding: 8px 18px;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hints">[空格] 暂停/开始 &nbsp;·&nbsp; [F] 全屏 &nbsp;·&nbsp; [R] 重置时间 &nbsp;·&nbsp; 双击屏幕退出全屏</div>
+
+  <!-- 完成弹层 -->
+  <div class="finish-notice" id="finishNotice">
+    <h2>流沙已尽 · 宁静安然</h2>
+    <p>一次专注的旅程已经完成，起身伸个懒腰吧。</p>
+    <button class="primary" onclick="dismissFinish()" style="padding: 10px 28px;">知道了</button>
+  </div>
+
+  <script>
+    /* ==========================================================
+       纯离线 Web Audio 音频：木鱼鸣响 & 白噪音雨声
+       ========================================================== */
+    class ZenAudio {
+      constructor() {
+        this.ctx = null;
+        this.soundEnabled = true;
+        this.noiseRunning = false;
+        this.noiseNode = null;
+        this.noiseGain = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      // 拟真轻叩木鱼清脆声
+      playWoodBlock() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(680, now);
+        osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+      // 钵声 / 铜磬钟声（完成时清扬悠长）
+      playSingingBowl() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        
+        const freqs = [528, 1056, 1584];
+        const gains = [0.2, 0.08, 0.03];
+        const now = this.ctx.currentTime;
+
+        freqs.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+
+          gain.gain.setValueAtTime(gains[i], now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + 3.6);
+        });
+      }
+      // 舒缓白噪音 / 雨声生成器
+      toggleNoise() {
+        this.init();
+        if (!this.ctx) return false;
+        if (this.noiseRunning) {
+          if (this.noiseGain) {
+            this.noiseGain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+            setTimeout(() => {
+              if (this.noiseNode) {
+                this.noiseNode.disconnect();
+                this.noiseNode = null;
+              }
+            }, 600);
+          }
+          this.noiseRunning = false;
+          return false;
+        } else {
+          // 生成粉红噪音缓冲区
+          const bufferSize = 2 * this.ctx.sampleRate;
+          const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+            output[i] *= 0.06; // 调小音量
+            b6 = white * 0.115926;
+          }
+          const whiteNoise = this.ctx.createBufferSource();
+          whiteNoise.buffer = noiseBuffer;
+          whiteNoise.loop = true;
+
+          // 低通滤波器营造温润雨声
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(800, this.ctx.currentTime);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.12, this.ctx.currentTime + 1.2);
+
+          whiteNoise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          whiteNoise.start();
+          this.noiseNode = whiteNoise;
+          this.noiseGain = gain;
+          this.noiseRunning = true;
+          return true;
+        }
+      }
+    }
+
+    const audio = new ZenAudio();
+
+    /* ==========================================================
+       倒计时状态
+       ========================================================== */
+    let totalTime = 25 * 60; // 25分钟
+    let remainingTime = totalTime;
+    let isRunning = false;
+    let timerInterval = null;
+
+    const timeText = document.getElementById('timeText');
+    const btnPlay = document.getElementById('btnPlay');
+    const statusInfo = document.getElementById('statusInfo');
+    const finishNotice = document.getElementById('finishNotice');
+    const hourglassBox = document.getElementById('hourglassBox');
+
+    let hasHoursSet = false;
+
+    function formatTime(s) {
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+      const pad2 = n => n < 10 ? '0' + n : n;
+      if (hasHoursSet || h > 0) {
+        return `${pad2(h)}:${pad2(m)}:${pad2(sec)}`;
+      }
+      return `${pad2(m)}:${pad2(sec)}`;
+    }
+
+    function updateTimeDisplay() {
+      timeText.textContent = formatTime(remainingTime);
+      sandRatio = totalTime > 0 ? (totalTime - remainingTime) / totalTime : 1;
+    }
+
+    function startTimer() {
+      audio.init();
+      if (remainingTime <= 0) {
+        remainingTime = totalTime;
+      }
+      isRunning = true;
+      btnPlay.textContent = '⏸ 暂停 (Space)';
+      btnPlay.classList.add('primary');
+      statusInfo.textContent = '专注时光中 · 万籁俱寂';
+
+      timerInterval = setInterval(() => {
+        if (remainingTime > 0) {
+          remainingTime--;
+          updateTimeDisplay();
+          // 每分钟轻敲一次木鱼（或每10秒微响）
+          if (remainingTime % 60 === 0 && remainingTime > 0) {
+            audio.playWoodBlock();
+          }
+        } else {
+          pauseTimer();
+          handleFinish();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer() {
+      isRunning = false;
+      clearInterval(timerInterval);
+      btnPlay.textContent = '▶ 继续 (Space)';
+      btnPlay.classList.remove('primary');
+      statusInfo.textContent = '已暂停 · 息心养神';
+    }
+
+    function toggleTimer() {
+      if (isRunning) pauseTimer();
+      else startTimer();
+    }
+
+    function resetTimer(newSeconds, hoursSet = false) {
+      pauseTimer();
+      if (newSeconds !== undefined) totalTime = newSeconds;
+      remainingTime = totalTime;
+      if (hoursSet !== undefined) hasHoursSet = hoursSet;
+      updateTimeDisplay();
+      btnPlay.textContent = '▶ 开始 (Space)';
+      statusInfo.textContent = '静心专注 · 沉淀当下';
+    }
+
+    function setTimerPreset(seconds) {
+      hasHoursSet = false;
+      document.querySelectorAll('.p-btn').forEach(b => b.classList.remove('active'));
+      if (window.event && window.event.target) window.event.target.classList.add('active');
+      resetTimer(seconds, false);
+      startTimer();
+    }
+
+    function handleFinish() {
+      finishNotice.classList.add('show');
+      audio.playSingingBowl();
+    }
+
+    function dismissFinish() {
+      finishNotice.classList.remove('show');
+      resetTimer();
+    }
+
+    // 翻转沙漏
+    function flipHourglass() {
+      hourglassBox.classList.add('flipping');
+      setTimeout(() => {
+        hourglassBox.classList.remove('flipping');
+        resetTimer();
+      }, 800);
+    }
+    hourglassBox.addEventListener('click', flipHourglass);
+    document.getElementById('btnFlip').addEventListener('click', flipHourglass);
+
+    btnPlay.addEventListener('click', toggleTimer);
+
+    /* ==========================================================
+       物理流沙与沙漏 Canvas 绘制
+       ========================================================== */
+    const canvas = document.getElementById('sandCanvas');
+    const ctx = canvas.getContext('2d');
+    let sandRatio = 0; // 0 (全新) -> 1 (沙流完)
+    let dropParticles = [];
+
+    function drawHourglass() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      // 玻璃沙漏轮廓绘制
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // 绘制沙漏玻璃壁
+      ctx.beginPath();
+      // 顶端木架
+      ctx.moveTo(cx - 150, 40);
+      ctx.lineTo(cx + 150, 40);
+      // 上半球收口到细颈
+      ctx.bezierCurveTo(cx + 150, 150, cx + 25, cy - 20, cx + 18, cy);
+      // 细颈向下展开
+      ctx.bezierCurveTo(cx + 25, cy + 20, cx + 150, h - 150, cx + 150, h - 40);
+      // 底端木架
+      ctx.lineTo(cx - 150, h - 40);
+      // 左侧向上对称
+      ctx.bezierCurveTo(cx - 150, h - 150, cx - 25, cy + 20, cx - 18, cy);
+      ctx.bezierCurveTo(cx - 25, cy - 20, cx - 150, 150, cx - 150, 40);
+      ctx.stroke();
+
+      // 沙漏两端木质托盘与金属立柱
+      ctx.fillStyle = '#232328';
+      ctx.fillRect(cx - 165, 26, 330, 14);
+      ctx.fillRect(cx - 165, h - 40, 330, 14);
+      ctx.fillStyle = '#d4af37';
+      ctx.fillRect(cx - 160, 24, 320, 4);
+      ctx.fillRect(cx - 160, h - 28, 320, 4);
+
+      // 上半部沙子 (随着 sandRatio 增加，高度下降)
+      const topSandLevel = (1 - sandRatio); // 1满 -> 0空
+      if (topSandLevel > 0.01) {
+        ctx.save();
+        ctx.beginPath();
+        // 限制在玻璃内切区
+        ctx.moveTo(cx - 140, 50);
+        ctx.lineTo(cx + 140, 50);
+        ctx.bezierCurveTo(cx + 140, 150, cx + 25, cy - 20, cx + 18, cy);
+        ctx.lineTo(cx - 18, cy);
+        ctx.bezierCurveTo(cx - 25, cy - 20, cx - 140, 150, cx - 140, 50);
+        ctx.clip();
+
+        // 填充沙子
+        const fillY = (cy - 10) - (cy - 60) * topSandLevel;
+        ctx.fillStyle = '#d8b572';
+        ctx.beginPath();
+        ctx.moveTo(cx - 150, fillY);
+        // 沙子漏斗凹陷形态
+        ctx.quadraticCurveTo(cx, fillY + 24 * (1 - topSandLevel), cx + 150, fillY);
+        ctx.lineTo(cx + 150, cy);
+        ctx.lineTo(cx - 150, cy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 下半部沙堆 (随着 sandRatio 增加，堆积高度上升)
+      if (sandRatio > 0.01) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(cx + 18, cy);
+        ctx.bezierCurveTo(cx + 25, cy + 20, cx + 140, h - 150, cx + 140, h - 50);
+        ctx.lineTo(cx - 140, h - 50);
+        ctx.bezierCurveTo(cx - 140, h - 150, cx - 25, cy + 20, cx - 18, cy);
+        ctx.clip();
+
+        const bottomSandHeight = (h - 90 - cy) * Math.min(sandRatio, 1);
+        const peakY = (h - 50) - bottomSandHeight;
+        ctx.fillStyle = '#d8b572';
+        ctx.beginPath();
+        ctx.moveTo(cx - 150, h - 45);
+        ctx.quadraticCurveTo(cx, peakY - 15, cx + 150, h - 45);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 下落细沙流 (在运行且还有沙时喷射颗粒)
+      if (isRunning && topSandLevel > 0.005) {
+        // 细流光
+        ctx.strokeStyle = 'rgba(216, 181, 114, 0.7)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx, (h - 50) - (h - 90 - cy) * Math.min(sandRatio, 1));
+        ctx.stroke();
+
+        // 喷射粒子
+        if (Math.random() < 0.8) {
+          dropParticles.push({
+            x: cx + (Math.random() - 0.5) * 6,
+            y: cy,
+            vy: Math.random() * 5 + 4,
+            alpha: 1,
+            size: Math.random() * 2 + 1.5
+          });
+        }
+      }
+
+      // 更新并绘制下落粒子
+      ctx.fillStyle = '#ecd199';
+      for (let i = dropParticles.length - 1; i >= 0; i--) {
+        const p = dropParticles[i];
+        p.y += p.vy;
+        p.alpha -= 0.015;
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        const groundY = (h - 50) - (h - 90 - cy) * Math.min(sandRatio, 1);
+        if (p.y >= groundY || p.alpha <= 0) {
+          dropParticles.splice(i, 1);
+        }
+      }
+      ctx.globalAlpha = 1;
+
+      // 玻璃高光光泽反光
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 100, 70);
+      ctx.bezierCurveTo(cx - 110, 140, cx - 40, cy - 30, cx - 25, cy - 10);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(cx - 25, cy + 10);
+      ctx.bezierCurveTo(cx - 40, cy + 30, cx - 110, h - 140, cx - 100, h - 70);
+      ctx.stroke();
+
+      ctx.restore();
+
+      requestAnimationFrame(drawHourglass);
+    }
+
+    drawHourglass();
+    updateTimeDisplay();
+
+    /* ==========================================================
+       全屏与环境控制
+       ========================================================== */
+    const btnFs = document.getElementById('btnFs');
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    btnFs.addEventListener('click', toggleFullscreen);
+
+    document.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button, a, input, select, textarea, #hourglassBox, .finish-notice, .zen-modal-card')) return;
+      toggleFullscreen();
+    });
+
+    // 白噪音按钮
+    const btnNoise = document.getElementById('btnNoise');
+    btnNoise.addEventListener('click', () => {
+      const active = audio.toggleNoise();
+      btnNoise.textContent = active ? '🌧 白噪音: 开' : '🌧 白噪音: 关';
+      btnNoise.style.color = active ? 'var(--accent)' : 'var(--text)';
+    });
+
+    // 音效开关
+    const btnSound = document.getElementById('btnSound');
+    btnSound.addEventListener('click', () => {
+      audio.soundEnabled = !audio.soundEnabled;
+      btnSound.textContent = audio.soundEnabled ? '🔊 木鱼音效' : '🔇 音效静音';
+    });
+
+    // 快捷键
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.target.id === 'taskInput') {
+          if (e.key === 'Enter') e.target.blur();
+          return;
+        }
+        if (e.key === 'Enter') document.getElementById('btnApplyZen').click();
+        if (e.key === 'Escape') closeZenModal();
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleTimer();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === 'r' || e.key === 'R') {
+        resetTimer();
+      } else if (e.key === 'c' || e.key === 'C') {
+        openZenModal();
+      }
+    });
+
+    // 自定义任务名持久化与交互
+    const taskInput = document.getElementById('taskInput');
+    const savedTask = localStorage.getItem('countdown_task_name') || '';
+    if (savedTask) taskInput.value = savedTask;
+    taskInput.addEventListener('input', () => {
+      localStorage.setItem('countdown_task_name', taskInput.value);
+    });
+    taskInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') taskInput.blur();
+    });
+
+    // 自定义弹窗控制逻辑
+    const zenModal = document.getElementById('zenModal');
+    const zenInputH = document.getElementById('zenInputH');
+    const zenInputM = document.getElementById('zenInputM');
+    const zenInputS = document.getElementById('zenInputS');
+    const btnCustom = document.getElementById('btnCustom');
+
+    function openZenModal() {
+      const h = Math.floor(totalTime / 3600);
+      const m = Math.floor((totalTime % 3600) / 60);
+      const s = totalTime % 60;
+      zenInputH.value = h;
+      zenInputM.value = m;
+      zenInputS.value = s;
+      zenModal.classList.add('open');
+      zenInputM.focus();
+    }
+    function closeZenModal() {
+      zenModal.classList.remove('open');
+    }
+    if (btnCustom) {
+      btnCustom.addEventListener('click', openZenModal);
+    }
+    document.getElementById('btnApplyZen').addEventListener('click', () => {
+      const h = parseInt(zenInputH.value, 10) || 0;
+      const m = parseInt(zenInputM.value, 10) || 0;
+      const s = parseInt(zenInputS.value, 10) || 0;
+      const total = h * 3600 + m * 60 + s;
+      if (total > 0) {
+        hasHoursSet = (h > 0);
+        document.querySelectorAll('.p-btn').forEach(b => b.classList.remove('active'));
+        closeZenModal();
+        resetTimer(total, h > 0);
+        startTimer();
+      }
+    });
+    zenModal.addEventListener('click', (e) => {
+      if (e.target === zenModal) closeZenModal();
+    });
+
+    // 控制栏自动隐现
+    const controlsBar = document.getElementById('controlsBar');
+    let idleTimer = null;
+    window.addEventListener('mousemove', () => {
+      controlsBar.classList.remove('autohide');
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        if (isRunning) controlsBar.classList.add('autohide');
+      }, 3500);
+    });
+  </script>
+</body>
+</html>

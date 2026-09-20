@@ -1,0 +1,2565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="theme-color" content="#050b1a">
+<title>霓虹极速点名 - 课堂随机点名</title>
+<style>
+/* ==========================================================================
+   课堂随机点名 v2 · 共享内核样式
+   适配基准：14 寸笔记本（1280×720 CSS px 起）
+   所有可压缩区域一律 min-height:0，确保 720p 高度下无滚动条、无裁切
+   ========================================================================== */
+
+:root {
+  --accent: #6366f1;
+  --accent2: #a855f7;
+  --bg: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 60%, #020617 100%);
+  --panel: rgba(15, 23, 42, 0.72);
+  --border: rgba(255, 255, 255, 0.14);
+  --text: #ffffff;
+  --text-dim: #94a3b8;
+  --glow: rgba(99, 102, 241, 0.5);
+
+  /* 纵向骨架高度：720p 下 合计约 122px，其余全部留给舞台 */
+  --hdr-h: clamp(40px, 5.4vh, 56px);
+  --st-h: clamp(30px, 4.2vh, 44px);
+  --hist-h: clamp(44px, 6.8vh, 72px);
+  --pad-x: clamp(12px, 2vw, 32px);
+  --r: 14px;
+  --u: clamp(11px, 1.32vh, 15px); /* 通用文字基准单位 */
+}
+
+/* 矮屏（1366×768 / 1280×720 笔记本）进一步压缩骨架 */
+@media (max-height: 760px) {
+  :root {
+    --hdr-h: 38px;
+    --st-h: 30px;
+    --hist-h: 42px;
+    --pad-x: 14px;
+    --u: 12px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  overflow: hidden;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  position: relative;
+}
+
+/* ---------- 顶部品牌栏 ---------- */
+.tc-header {
+  height: var(--hdr-h);
+  min-height: var(--hdr-h);
+  padding: 0 var(--pad-x);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  z-index: 60;
+  flex-shrink: 0;
+}
+
+.brand { display: flex; align-items: center; gap: clamp(6px, 1vw, 12px); min-width: 0; }
+.brand-icon { font-size: clamp(18px, 2.6vh, 26px); line-height: 1; flex-shrink: 0; }
+.brand-title {
+  font-size: clamp(14px, 2.1vh, 21px);
+  font-weight: 900;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: linear-gradient(90deg, #fff, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.brand-badge {
+  font-size: clamp(9px, 1.3vh, 11px);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.header-actions { display: flex; gap: clamp(4px, 0.7vw, 10px); align-items: center; flex-shrink: 0; }
+.btn-icon {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: clamp(4px, 0.7vh, 7px) clamp(7px, 1vw, 14px);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: clamp(11px, 1.45vh, 13px);
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: background .18s, transform .18s, border-color .18s;
+}
+.btn-icon:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-1px); border-color: var(--accent); }
+.btn-icon.off { opacity: .45; }
+
+/* ---------- 状态条 ---------- */
+.tc-status {
+  height: var(--st-h);
+  min-height: var(--st-h);
+  padding: 0 var(--pad-x);
+  display: flex;
+  gap: clamp(8px, 1.6vw, 26px);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.32);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: clamp(11px, 1.42vh, 14px);
+  color: var(--text-dim);
+  flex-shrink: 0;
+  z-index: 50;
+  white-space: nowrap;
+}
+.stat-val { color: var(--accent); font-weight: 800; font-size: 1.12em; }
+.tc-status label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.tc-status input[type=checkbox] { accent-color: var(--accent); transform: scale(1.12); cursor: pointer; }
+.sel-count {
+  background: rgba(15, 23, 42, 0.9);
+  color: #fff;
+  border: 1.5px solid var(--accent);
+  border-radius: 7px;
+  padding: 2px 6px;
+  font-size: 1em;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+.sel-count option { background: #0f172a; color: #fff; }
+
+/* ---------- 主舞台 ---------- */
+.tc-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(6px, 1.2vh, 18px) var(--pad-x);
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* 主题舞台：每个模板自己往里塞东西 */
+.tc-stage {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ---------- 控制面板 ---------- */
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 0.7vh, 9px);
+  flex-shrink: 0;
+  z-index: 30;
+  padding-top: clamp(4px, 0.8vh, 10px);
+}
+.btn-main-action {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  color: #fff;
+  font-family: inherit;
+  padding: clamp(8px, 1.6vh, 15px) clamp(30px, 4.6vw, 66px);
+  font-size: clamp(16px, 2.5vh, 24px);
+  font-weight: 900;
+  border-radius: 40px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5), 0 0 18px var(--glow);
+  transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), filter .18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+}
+.btn-main-action:hover { transform: scale(1.045); filter: brightness(1.12); }
+.btn-main-action:active { transform: scale(.965); }
+.btn-main-action.stop {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  box-shadow: 0 6px 24px rgba(239, 68, 68, 0.6);
+  animation: pulseStop 1.1s infinite;
+}
+@keyframes pulseStop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+
+.hint-keys {
+  font-size: clamp(10px, 1.32vh, 12px);
+  color: var(--text-dim);
+  display: flex;
+  gap: clamp(8px, 1.4vw, 18px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.kbd {
+  background: rgba(255, 255, 255, 0.14);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, Consolas, monospace;
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+/* ---------- 底部历史台 ---------- */
+.tc-history {
+  height: var(--hist-h);
+  min-height: var(--hist-h);
+  padding: 0 var(--pad-x);
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.2vw, 16px);
+  flex-shrink: 0;
+  z-index: 40;
+  border-top: 1.5px solid var(--border);
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+}
+.history-title-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(11px, 1.5vh, 14px);
+  font-weight: 800;
+  white-space: nowrap;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.history-track {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: center;
+  padding: 4px 0;
+  scrollbar-width: thin;
+}
+.history-track::-webkit-scrollbar { height: 5px; }
+.history-track::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; opacity: .5; }
+.hist-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 13px;
+  border-radius: 20px;
+  font-size: clamp(11px, 1.5vh, 14px);
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: popIn .3s cubic-bezier(.34, 1.56, .64, 1);
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.35);
+}
+.history-empty { font-size: clamp(11px, 1.4vh, 13px); color: var(--text-dim); opacity: .7; padding-left: 4px; }
+@keyframes popIn { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: scale(1); } }
+
+/* ---------- 通用：学号标签 ---------- */
+.id-tag {
+  font-family: ui-monospace, 'SF Mono', Consolas, Menlo, monospace;
+  font-weight: 800;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+/* ---------- 中选揭晓浮层（各主题可复用） ---------- */
+.tc-reveal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 80;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.4vh, 16px);
+  padding: clamp(14px, 2.4vh, 28px) clamp(20px, 3.4vw, 46px);
+  max-width: min(94%, 1100px);
+  max-height: 100%;
+  overflow: auto;
+  border-radius: 22px;
+  background: rgba(10, 14, 26, 0.94);
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 60px var(--glow), 0 20px 60px rgba(0, 0, 0, 0.8);
+  animation: revealPop .42s cubic-bezier(.34, 1.56, .64, 1);
+}
+.tc-reveal.active { display: flex; }
+.tc-reveal-title {
+  font-size: clamp(12px, 1.9vh, 17px);
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.tc-reveal-cards { display: flex; gap: clamp(8px, 1.2vw, 16px); flex-wrap: wrap; justify-content: center; }
+.tc-reveal-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: clamp(8px, 1.4vh, 16px) clamp(14px, 2vw, 28px);
+  text-align: center;
+  animation: revealCard .5s cubic-bezier(.34, 1.56, .64, 1) backwards;
+}
+.tc-reveal-card .rc-id { font-size: clamp(11px, 1.5vh, 15px); color: var(--accent); font-weight: 800; }
+.tc-reveal-card .rc-name {
+  font-size: clamp(20px, 4.4vh, 44px);
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.15;
+  text-shadow: 0 0 22px var(--glow);
+}
+@keyframes revealPop { from { opacity: 0; transform: translate(-50%, -50%) scale(.7); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes revealCard { from { opacity: 0; transform: translateY(18px) scale(.8); } to { opacity: 1; transform: none; } }
+
+/* ---------- 弹窗 ---------- */
+.tc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(10px, 3vh, 30px);
+}
+.tc-modal-backdrop.active { display: flex; }
+.tc-modal {
+  background: #0f172a;
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 660px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(14px, 2.4vh, 24px);
+  gap: clamp(8px, 1.4vh, 14px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+  overflow: hidden;
+}
+.tc-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 9px;
+  flex-shrink: 0;
+}
+.tc-modal-title { font-size: clamp(14px, 2vh, 18px); font-weight: 800; color: #fff; }
+.tc-modal-close { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; line-height: 1; }
+.tc-modal-close:hover { color: #fff; }
+.tc-modal-tip { font-size: clamp(11px, 1.4vh, 13px); color: var(--text-dim); line-height: 1.55; flex-shrink: 0; }
+.tc-modal-tip code { background: rgba(255, 255, 255, 0.1); padding: 1px 5px; border-radius: 4px; color: var(--accent); }
+.tc-modal textarea {
+  width: 100%;
+  flex: 1;
+  min-height: 130px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: #fff;
+  padding: 10px 12px;
+  font-size: clamp(12px, 1.5vh, 14px);
+  line-height: 1.55;
+  font-family: ui-monospace, Consolas, monospace;
+  outline: none;
+  resize: none;
+  user-select: text;
+}
+.tc-modal textarea:focus { border-color: var(--accent); }
+.tc-modal-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  flex-shrink: 0;
+}
+.tc-modal-foot > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-sub {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--border);
+  color: #fff;
+  padding: 6px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: clamp(11px, 1.4vh, 13px);
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background .18s;
+}
+.btn-sub:hover { background: rgba(255, 255, 255, 0.2); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none;
+  color: #fff;
+  font-weight: 800;
+  padding: 6px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: clamp(11px, 1.4vh, 13px);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-primary:hover { filter: brightness(1.12); }
+
+/* ---------- 轻提示 toast（不打断音乐，替代 alert） ---------- */
+.tc-toast-wrap {
+  position: fixed;
+  left: 50%;
+  top: clamp(60px, 9vh, 90px);
+  transform: translateX(-50%);
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.tc-toast {
+  background: rgba(15, 23, 42, 0.96);
+  border: 1.5px solid var(--accent);
+  color: #fff;
+  padding: 9px 20px;
+  border-radius: 12px;
+  font-size: clamp(12px, 1.6vh, 15px);
+  font-weight: 700;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  animation: toastIn .3s cubic-bezier(.34, 1.56, .64, 1);
+  max-width: 88vw;
+  text-align: center;
+}
+.tc-toast.out { animation: toastOut .3s forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(-14px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(-14px) scale(.9); } }
+
+/* ---------- 特效画布与屏幕反馈 ---------- */
+#fx-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 200; }
+#flash-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 190; }
+
+.screen-shake { animation: shake .38s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes shake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(3px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
+}
+
+/* 隐藏滚动条但保留滚动 */
+.hide-sb { scrollbar-width: none; }
+.hide-sb::-webkit-scrollbar { display: none; }
+
+/* 通用可滚动容器 */
+.tc-scroll { overflow: auto; }
+
+/* 舞台通用网格容器（由 autoFitGrid 设置具体尺寸） */
+.fit-grid { display: grid; justify-content: center; align-content: center; margin: 0 auto; }
+
+/* ===== 主题样式：霓虹极速点名 ===== */
+
+:root{
+  --accent:#38bdf8;
+  --accent2:#6366f1;
+  --bg: radial-gradient(circle at 50% 44%, #0a1836 0%, #050b1a 56%, #01030a 100%);
+  --panel: rgba(5,11,26,.84);
+  --border: rgba(56,189,248,.24);
+  --glow: rgba(56,189,248,.55);
+}
+
+#nx-tunnel{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.nx-scan{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  background: repeating-linear-gradient(0deg,
+    rgba(56,189,248,.055) 0px, rgba(56,189,248,.055) 1px,
+    rgba(0,0,0,0) 1px, rgba(0,0,0,0) 3px);
+}
+.nx-vig{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  background: radial-gradient(circle at 50% 44%, rgba(0,0,0,0) 38%, rgba(1,3,10,.78) 100%);
+}
+
+/* ── 中央名字显示器 ── */
+.nx-core{
+  position:absolute; z-index:5; left:2%; right:2%; top:1.5%;
+  bottom: clamp(46px, 11.6vh, 94px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap: clamp(2px, .7vh, 10px);
+  text-align:center; pointer-events:none;
+}
+.nx-frame{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width: min(94%, 1120px); height: min(78%, 92%);
+  border:1px solid rgba(56,189,248,.20); border-radius: 20px;
+  transition: border-color .3s, box-shadow .3s;
+}
+.nx-frame::before, .nx-frame::after{
+  content:''; position:absolute; width: clamp(16px,3.2vh,40px); height: clamp(16px,3.2vh,40px);
+  border: 2.5px solid var(--accent); filter: drop-shadow(0 0 8px var(--glow));
+}
+.nx-frame::before{ left:-2px; top:-2px; border-right:none; border-bottom:none; border-radius: 20px 0 0 0; }
+.nx-frame::after{ right:-2px; bottom:-2px; border-left:none; border-top:none; border-radius: 0 0 20px 0; }
+.nx-core.locked .nx-frame{
+  border-color: var(--accent);
+  box-shadow: 0 0 42px rgba(56,189,248,.45), inset 0 0 70px rgba(56,189,248,.10);
+}
+
+.nx-tag{
+  font-size: clamp(8px, 1.3vh, 13px); font-weight:800; letter-spacing: clamp(3px,.9vw,8px);
+  color: rgba(125,211,252,.72); text-transform: uppercase;
+}
+.nx-sid{
+  font-size: clamp(12px, 2.1vh, 22px); color:#7dd3fc; letter-spacing: 2px; opacity:.92;
+}
+.nx-nm{
+  font-size: clamp(40px, 13vh, 140px);
+  font-weight: 900; line-height: 1.05;
+  letter-spacing: clamp(1px,.7vh,9px);
+  white-space: nowrap; max-width: 100%;
+  background: linear-gradient(180deg, #ffffff 8%, #bae6fd 46%, #6366f1 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 24px rgba(56,189,248,.62));
+}
+.nx-core.locked .nx-nm{
+  animation: nxLockIn .62s cubic-bezier(.22,1.4,.42,1) forwards;
+  filter: drop-shadow(0 0 34px rgba(125,211,252,.95)) drop-shadow(0 0 84px rgba(99,102,241,.75));
+}
+@keyframes nxLockIn{
+  0%{ transform: scale(.86); filter: brightness(2.6) drop-shadow(0 0 60px #ffffff); }
+  46%{ transform: scale(1.17); }
+  100%{ transform: scale(1.06); }
+}
+.nx-bar{
+  width: min(58%, 560px); height: clamp(3px,.7vh,6px); margin-top: clamp(1px,.5vh,8px);
+  border-radius: 99px; background: rgba(56,189,248,.15); overflow:hidden;
+}
+.nx-bar i{
+  display:block; height:100%; width:0%; border-radius:99px;
+  background: linear-gradient(90deg,#38bdf8,#818cf8,#e0f2fe);
+  box-shadow: 0 0 14px rgba(56,189,248,.95);
+}
+
+/* ── 底部候场池 ── */
+.nx-pool-tip{
+  position:absolute; z-index:4; left: clamp(6px,1vw,18px); bottom: clamp(4px,.8vh,10px);
+  width: clamp(56px, 8.6vw, 112px); height: clamp(32px, 9vh, 72px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  border-radius: 10px; border:1px solid rgba(56,189,248,.32); background: rgba(56,189,248,.10);
+  font-size: clamp(9px,1.22vh,12px); font-weight:800; color:#7dd3fc; letter-spacing:1px;
+  white-space:nowrap;
+}
+.nx-pool-tip b{ font-size: clamp(12px,1.9vh,18px); color:#e0f2fe; line-height:1; }
+.nx-pool{
+  position:absolute; z-index:4;
+  left: clamp(70px, 10.6vw, 142px); right: clamp(6px,1vw,18px);
+  bottom: clamp(4px,.8vh,10px); height: clamp(32px, 9vh, 72px);
+  display:grid; justify-content:center; align-content:center; gap:3px;
+  overflow:hidden;
+}
+.nx-chip{
+  display:flex; align-items:center; justify-content:center;
+  border-radius: 6px; border:1px solid rgba(56,189,248,.20);
+  background: rgba(56,189,248,.07); color:#cbd5e1; font-weight:700;
+  overflow:hidden; white-space:nowrap;
+  transition: transform .1s, background .1s, border-color .1s, color .1s;
+}
+.nx-chip.hot{
+  background:#38bdf8; border-color:#e0f2fe; color:#04101f;
+  box-shadow: 0 0 14px rgba(56,189,248,.95); transform: scale(1.07);
+}
+.nx-chip.dim{ opacity:.26; }
+.nx-chip.won{
+  background: linear-gradient(180deg,#fde047,#f59e0b); border-color:#fffbeb; color:#1a1200;
+  box-shadow: 0 0 18px rgba(253,224,71,.9); opacity:1;
+}
+
+/* ── 揭晓浮层：横向大字卡片 ── */
+.nx-reveal{
+  position:absolute; inset:0; z-index:60; display:none;
+  background: radial-gradient(circle at 50% 50%, rgba(6,14,36,.90), rgba(1,3,10,.96));
+  backdrop-filter: blur(3px);
+}
+.nx-reveal.active{ display:block; }
+.nx-rv-label{
+  position:absolute; left:0; right:0; top: clamp(4px,2vh,22px); text-align:center;
+  font-size: clamp(11px,1.9vh,17px); font-weight:900;
+  letter-spacing: clamp(2px,.85vw,8px); color:#7dd3fc;
+  text-shadow: 0 0 22px rgba(56,189,248,.92);
+}
+.nx-rv-tip{
+  position:absolute; left:0; right:0; bottom: clamp(3px,1.2vh,12px); text-align:center;
+  font-size: clamp(10px,1.38vh,13px); color:#64748b; letter-spacing:1px;
+}
+#nx-rv-box{
+  position:absolute; left:2.5%; right:2.5%;
+  top: clamp(28px, 7.8vh, 70px); bottom: clamp(20px, 5vh, 42px);
+  display:grid; justify-content:center; align-content:center;
+}
+.nx-card{
+  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap: clamp(1px,.4vh,5px); border-radius: 14px; overflow:hidden;
+  border: 1.5px solid var(--accent);
+  background: linear-gradient(150deg, rgba(56,189,248,.20), rgba(99,102,241,.10) 55%, rgba(4,10,26,.86));
+  box-shadow: 0 0 26px rgba(56,189,248,.35), inset 0 0 22px rgba(56,189,248,.10);
+  animation: nxCardIn .5s cubic-bezier(.34,1.56,.64,1) backwards;
+}
+.nx-card::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+  background: linear-gradient(180deg,#38bdf8,#6366f1);
+}
+.nx-card .nc-id{ font-size: clamp(9px,1.5vh,15px); color:#7dd3fc; letter-spacing:1px; }
+.nx-card .nc-nm{
+  font-size: clamp(20px,4.6vh,64px); font-weight:900; color:#fff; line-height:1.12;
+  text-shadow: 0 0 22px rgba(56,189,248,.9);
+  white-space:nowrap; max-width:96%; overflow:hidden;
+}
+@keyframes nxCardIn{ from{ opacity:0; transform: translateY(24px) scale(.84); } to{ opacity:1; transform:none; } }
+
+</style>
+</head>
+<body>
+
+<canvas id="fx-canvas"></canvas>
+<canvas id="flash-canvas"></canvas>
+
+<header class="tc-header">
+  <div class="brand">
+    <span class="brand-icon">⚡</span>
+    <span class="brand-title">霓虹极速点名</span>
+    <span class="brand-badge">霓虹极速版</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" id="btn-bgm" title="背景氛围音乐开关">🎵 氛围音: 开</button>
+    <button class="btn-icon" id="btn-sound" title="全部音效开关">🔊 音效: 开</button>
+    <button class="btn-icon" id="btn-manage" title="修改 / 导入 / 导出名单（快捷键 H）">📝 名单管理</button>
+    <button class="btn-icon" id="btn-fullscreen" title="全屏（快捷键 F）">⛶ 全屏</button>
+  </div>
+</header>
+
+<div class="tc-status">
+  <div>全班 <span class="stat-val" id="stat-total">0</span> 人</div>
+  <div>待抽 <span class="stat-val" id="stat-remain">0</span> 人</div>
+  <div>已抽 <span class="stat-val" id="stat-called">0</span> 人</div>
+  <label title="开启后本轮内不会重复点到同一位同学">
+    <input type="checkbox" id="chk-norepeat" checked>
+    <span>不重复抽取</span>
+  </label>
+  <div>
+    <span>每次抽取</span>
+    <select id="sel-count" class="sel-count" title="可选择一次抽出 1~6 人（快捷键 1~6）">
+      <option value="1" selected>1 人</option>
+      <option value="2">2 人</option>
+      <option value="3">3 人</option>
+      <option value="4">4 人</option>
+      <option value="5">5 人</option>
+      <option value="6">6 人</option>
+    </select>
+  </div>
+</div>
+
+<main class="tc-main">
+  <div class="tc-stage">
+
+<canvas id="nx-tunnel"></canvas>
+<div class="nx-scan"></div>
+<div class="nx-vig"></div>
+
+<div class="nx-core" id="nx-core">
+  <div class="nx-frame"></div>
+  <div class="nx-tag">NEON ROLL CALL</div>
+  <div class="nx-sid id-tag" id="nx-sid">NO.--</div>
+  <div class="nx-nm" id="nx-nm">准备就绪</div>
+  <div class="nx-bar"><i id="nx-bar-fill"></i></div>
+</div>
+
+<div class="nx-pool-tip"><span>候场池</span><b id="nx-pool-num">0</b></div>
+<div class="nx-pool" id="nx-pool" data-dyn></div>
+
+<div class="nx-reveal" id="nx-reveal">
+  <div class="nx-rv-label">⚡ 极 速 锁 定 · 本 轮 中 选 ⚡</div>
+  <div class="nx-rv-box" id="nx-rv-box" data-dyn></div>
+  <div class="nx-rv-tip">按 空格 继续抽取 · 按 Esc 收起</div>
+</div>
+  </div>
+
+  <div class="control-panel">
+    <button class="btn-main-action" id="btn-start">
+      <span id="btn-icon">▶</span>
+      <span id="btn-text">开始点名</span>
+    </button>
+    <div class="hint-keys">
+      <span><span class="kbd">空格</span> 开始/停止</span>
+      <span><span class="kbd">1~6</span> 抽取人数</span>
+      <span><span class="kbd">R</span> 重置本轮</span>
+      <span><span class="kbd">F</span> 全屏</span>
+      <span><span class="kbd">H</span> 名单管理</span>
+      <span><span class="kbd">M</span> 静音</span>
+    </div>
+  </div>
+</main>
+
+<div class="tc-history">
+  <div class="history-title-box"><span>⚡</span><span>本轮极速名单</span></div>
+  <div class="history-track" id="themed-history-list" data-dyn></div>
+</div>
+
+<div class="tc-modal-backdrop" id="modal-manage">
+  <div class="tc-modal">
+    <div class="tc-modal-head">
+      <h3 class="tc-modal-title">📝 班级学生名单设置</h3>
+      <button class="tc-modal-close" id="modal-close" title="关闭">&times;</button>
+    </div>
+    <p class="tc-modal-tip">
+      <b>格式</b>：<code>学号 姓名</code>，每行一位同学，例如 <code>202401 张三</code>。<br>
+      学号与姓名之间用<b>空格</b>、<b>逗号</b>或 <b>Tab</b> 分隔都可以；以 <code>#</code> 开头的行会被忽略。<br>
+      保存后本机全部 15 套模板会<b>自动同步生效</b>；也可以导出后改用记事本编辑，再点「导入 txt」。
+    </p>
+    <textarea id="txt-input" spellcheck="false" placeholder="202401 张三&#10;202402 李四&#10;202403 王五"></textarea>
+    <div class="tc-modal-foot">
+      <div>
+        <input type="file" id="file-input" accept=".txt,text/plain" style="display:none">
+        <button class="btn-sub" id="btn-import-txt">📂 导入 txt</button>
+        <button class="btn-sub" id="btn-export-txt">💾 导出 txt</button>
+        <button class="btn-sub" id="btn-export-html" title="导出后名单直接内嵌在网页里，换电脑打开也不会丢">📦 导出 HTML(名单已内嵌)</button>
+      </div>
+      <div>
+        <button class="btn-sub" id="btn-restore-default">恢复默认</button>
+        <button class="btn-primary" id="btn-save-list">保存并应用</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== 内置默认名单（页面上的修改会通过「导出 HTML」直接填充到这里） ===== */
+const DEFAULT_STUDENTS_RAW = "202401 陈晨\n202402 林子轩\n202403 王梓涵\n202404 李雨欣\n202405 张天宇\n202406 刘思齐\n202407 黄俊杰\n202408 杨博文\n202409 赵嘉欣\n202410 周子豪\n202411 吴佳琪\n202412 孙宇涵\n202413 徐浩然\n202414 朱梦瑶\n202415 郭宇轩\n202416 何语嫣\n202417 高若萱\n202418 罗博宇\n202419 郑泽宇\n202420 梁欣怡\n202421 谢梓桐\n202422 宋雨泽\n202423 唐子默\n202424 许博涵\n202425 韩雪儿\n202426 冯天逸\n202427 邓子墨\n202428 曹雨菲\n202429 彭子轩\n202430 曾俊杰\n202431 萧雅涵\n202432 田浩宇\n202433 董思源\n202434 袁梦洁\n202435 潘宇恒\n202436 于心怡\n202437 蒋明远\n202438 蔡雨桐\n202439 余泽楷\n202440 杜佳慧\n202441 叶子凡\n202442 程思琪\n202443 苏晨辉\n202444 魏梓琪\n202445 薛子轩";
+
+window.THEME_ICON = "⚡";
+window.THEME_SFX  = {"win":"fanfare"};
+window.THEME_MUSIC = {"bpm":128,"root":48,"stepsPerBar":16,"chords":[[0,7,12,19],[3,10,15,22],[-2,5,10,17],[-4,3,8,15]],"pad":{"wave":"sawtooth","vol":0.052,"oct":1,"dur":1.02,"atk":0.55,"cut":2200},"bass":{"pat":[1,0,1,0,1,0,1,0],"oct":0,"vol":0.078,"wave":"sawtooth","dur":3,"cut":460},"arp":{"pat":[0,2,1,3,4,3,1,2],"wave":"square","vol":0.028,"oct":2,"dur":0.7},"lead":{"pat":[0,1,2,3,2,1,0,-1],"wave":"square","vol":0.034,"oct":2,"dur":1.2,"extra":0,"atk":0.01},"drums":"four","drumVol":0.55,"reverb":0.42,"delay":0.3,"bells":false};
+
+/* ==========================================================================
+   课堂随机点名 v2 · 页面内核运行时
+   由构建脚本注入到每个模板，模板只需提供 stageInit / stageStartRoll /
+   stageStopRoll / onResetHook 等钩子。
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ *
+   *  0. 小工具
+   * ------------------------------------------------------------------ */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const randInt = (a, b) => Math.floor(rand(a, b + 1));
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  const toastWrap = document.createElement('div');
+  toastWrap.className = 'tc-toast-wrap';
+  document.body.appendChild(toastWrap);
+
+  function toast(msg, ms) {
+    const el = document.createElement('div');
+    el.className = 'tc-toast';
+    el.textContent = msg;
+    toastWrap.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 320);
+    }, ms || 2200);
+  }
+
+  /* 自定义确认框（替代原生 confirm，不打断音频） */
+  function confirmBox(msg, onOk, okText) {
+    const bd = document.createElement('div');
+    bd.className = 'tc-modal-backdrop active';
+    bd.innerHTML =
+      '<div class="tc-modal" style="max-width:420px;">' +
+      '<div class="tc-modal-head"><h3 class="tc-modal-title">请确认</h3></div>' +
+      '<p class="tc-modal-tip" style="font-size:14px;color:#e2e8f0;"></p>' +
+      '<div class="tc-modal-foot" style="justify-content:flex-end;">' +
+      '<div><button class="btn-sub" data-no>取消</button>' +
+      '<button class="btn-primary" data-yes></button></div></div></div>';
+    bd.querySelector('.tc-modal-tip').textContent = msg;
+    bd.querySelector('[data-yes]').textContent = okText || '确认';
+    document.body.appendChild(bd);
+    const close = () => bd.remove();
+    bd.querySelector('[data-no]').onclick = close;
+    bd.addEventListener('click', e => { if (e.target === bd) close(); });
+    bd.querySelector('[data-yes]').onclick = () => { close(); onOk && onOk(); };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  1. 自适应网格：保证 N 个元素在舞台内完整排布，绝不出屏
+   * ------------------------------------------------------------------ */
+  function autoFitGrid(el, n, opt) {
+    if (!el || !n) return;
+    opt = opt || {};
+    const gap = opt.gap || 10;
+    const ratio = opt.ratio || 1.25;   // 单元格 高/宽 比
+    const minW = opt.minW || 54;
+    const maxW = opt.maxW || 260;
+    const maxH = opt.maxH || 9999;
+    const pad = opt.pad || 4;
+
+    const W = el.clientWidth - pad * 2;
+    const H = el.clientHeight - pad * 2;
+    if (W <= 0 || H <= 0) return;
+
+    let best = null;
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols);
+      const cw = (W - gap * (cols - 1)) / cols;
+      const ch = (H - gap * (rows - 1)) / rows;
+      if (cw <= 0 || ch <= 0) continue;
+      const needH = cw * ratio;
+      const size = Math.min(cw, ch / ratio);
+      const fits = ch >= needH;
+      const score = size - (fits ? 0 : 1000) + (cw <= maxW ? 0 : -500);
+      if (!best || score > best.score) best = { cols, cw, ch, score, fits };
+    }
+    if (!best) return;
+    const cw = clamp(best.cw, 30, maxW);
+    const ch = clamp(Math.min(best.ch, cw * ratio), 26, maxH);
+    el.style.gridTemplateColumns = 'repeat(' + best.cols + ', ' + cw.toFixed(2) + 'px)';
+    el.style.gridAutoRows = ch.toFixed(2) + 'px';
+    el.style.gap = gap + 'px';
+    el.dataset.cols = best.cols;
+    el.dataset.cw = cw.toFixed(1);
+    el.dataset.ch = ch.toFixed(1);
+    return { cols: best.cols, cw, ch };
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  2. 音频引擎：每套主题独立 BGM + 三段式场景音效
+   *     点名前 → Risers/倒数；摇人时 → 加速脉冲；抽中时 → 号角庆典
+   * ------------------------------------------------------------------ */
+  const Music = (function () {
+    let ctx = null, master, comp, revNode, revGain, dlyNode, dlyGain, noiseBuf = null;
+    let muted = false, bgmOn = false, fast = false;
+    let step = 0, nextTime = 0, timer = null, intensity = 0;
+
+    /* 主题音乐配置（由模板注入 window.THEME_MUSIC） */
+    const DEF = {
+      bpm: 96,
+      root: 45,                 // A2
+      stepsPerBar: 16,
+      chords: [[0, 3, 7], [0, 3, 7], [-4, 0, 3], [-5, -2, 2]],
+      pad: { wave: 'sawtooth', vol: 0.030, oct: 0, dur: 0.99, atk: 0.35, cut: 1500 },
+      bass: { pat: [1, 0, 0, 0, 1, 0, 1, 0], oct: 1, vol: 0.085, wave: 'triangle', dur: 0.6, cut: 420 },
+      arp: { pat: [0, 2, 4, 7, 4, 2, 0, 2], wave: 'triangle', vol: 0.045, oct: 2, dur: 0.5 },
+      lead: null,
+      drums: 'none',
+      drumVol: 1,
+      swing: 0,
+      reverb: 0.32,
+      delay: 0.16,
+      bells: true
+    };
+    const M = (function () {
+      const src = window.THEME_MUSIC || {};
+      const out = Object.assign({}, DEF);
+      Object.keys(src).forEach(k => {
+        out[k] = (src[k] && typeof src[k] === 'object' && !Array.isArray(src[k]))
+          ? Object.assign({}, DEF[k] || {}, src[k]) : src[k];
+      });
+      return out;
+    })();
+
+    const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+
+    function getCtx() {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+        master = ctx.createGain();
+        master.gain.value = 0.9;
+        comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -14;
+        comp.knee.value = 26;
+        comp.ratio.value = 5;
+        comp.attack.value = 0.004;
+        comp.release.value = 0.22;
+        master.connect(comp);
+        comp.connect(ctx.destination);
+
+        /* 混响：程序生成脉冲响应，营造空间氛围感 */
+        revNode = ctx.createConvolver();
+        revNode.buffer = makeIR(ctx, 2.6, 2.6);
+        revGain = ctx.createGain();
+        revGain.gain.value = M.reverb;
+        revNode.connect(revGain);
+        revGain.connect(master);
+
+        /* 立体延迟 */
+        dlyNode = ctx.createDelay(1.0);
+        dlyNode.delayTime.value = 60 / M.bpm * 0.75;
+        dlyGain = ctx.createGain();
+        dlyGain.gain.value = M.delay;
+        dlyNode.connect(dlyGain);
+        dlyGain.connect(dlyNode);
+        dlyGain.connect(master);
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+
+    function makeIR(c, seconds, decay) {
+      const rate = c.sampleRate, len = Math.floor(rate * seconds);
+      const buf = c.createBuffer(2, len, rate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = buf.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        }
+      }
+      return buf;
+    }
+
+    function noise(c) {
+      if (!noiseBuf) {
+        const len = Math.floor(c.sampleRate * 1.2);
+        noiseBuf = c.createBuffer(1, len, c.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      }
+      return noiseBuf;
+    }
+
+    /* ---- 基础音色 ---- */
+    function env(g, t, a, d, peak, sus) {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + a);
+      g.gain.setTargetAtTime(sus === undefined ? 0.0001 : sus, t + a, d);
+    }
+
+    function tone(freq, t, dur, vol, wave, dest, opt) {
+      if (!ctx || muted) return;
+      opt = opt || {};
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = wave || 'triangle';
+      o.frequency.setValueAtTime(freq, t);
+      if (opt.glide) o.frequency.exponentialRampToValueAtTime(Math.max(20, opt.glide), t + dur);
+      if (opt.detune) o.detune.setValueAtTime(opt.detune, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + (opt.atk || 0.008));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      let node = o;
+      if (opt.cut) {
+        const f = ctx.createBiquadFilter();
+        f.type = 'lowpass';
+        f.frequency.setValueAtTime(opt.cut, t);
+        if (opt.cutTo) f.frequency.exponentialRampToValueAtTime(opt.cutTo, t + dur);
+        o.connect(f); node = f;
+      }
+      node.connect(g);
+      g.connect(dest || master);
+      o.start(t); o.stop(t + dur + 0.05);
+    }
+
+    function bell(freq, t, dur, vol) {
+      if (!ctx || muted) return;
+      const car = ctx.createOscillator(), mod = ctx.createOscillator();
+      const mg = ctx.createGain(), g = ctx.createGain();
+      car.type = 'sine'; car.frequency.value = freq;
+      mod.type = 'sine'; mod.frequency.value = freq * 2.76;
+      mg.gain.setValueAtTime(freq * 1.6, t);
+      mg.gain.exponentialRampToValueAtTime(1, t + dur * 0.5);
+      mod.connect(mg); mg.connect(car.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      car.connect(g); g.connect(master);
+      if (revNode) g.connect(revNode);
+      mod.start(t); car.start(t);
+      mod.stop(t + dur + 0.05); car.stop(t + dur + 0.05);
+    }
+
+    function kick(t, vol) {
+      if (!ctx || muted) return;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(160, t);
+      o.frequency.exponentialRampToValueAtTime(38, t + 0.11);
+      g.gain.setValueAtTime(vol * 0.34, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.19);
+    }
+    function sub(t, vol) {
+      if (!ctx || muted) return;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(90, t);
+      o.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+      g.gain.setValueAtTime(vol * 0.4, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.65);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.7);
+    }
+    function snare(t, vol) {
+      if (!ctx || muted) return;
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx);
+      n.playbackRate.value = 1;
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1100;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol * 0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+      n.connect(f); f.connect(g); g.connect(master);
+      if (revNode) g.connect(revNode);
+      n.start(t); n.stop(t + 0.16);
+    }
+    function clap(t, vol) {
+      if (!ctx || muted) return;
+      for (let i = 0; i < 3; i++) {
+        const n = ctx.createBufferSource(); n.buffer = noise(ctx);
+        const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1600;
+        const g = ctx.createGain();
+        const tt = t + i * 0.011;
+        g.gain.setValueAtTime(vol * 0.16, tt);
+        g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.09);
+        n.connect(f); f.connect(g); g.connect(master);
+        n.start(tt); n.stop(tt + 0.1);
+      }
+    }
+    function hat(t, vol, open) {
+      if (!ctx || muted) return;
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx);
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7500;
+      const g = ctx.createGain();
+      const d = open ? 0.24 : 0.035;
+      g.gain.setValueAtTime(vol * 0.09, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      n.connect(f); f.connect(g); g.connect(master);
+      n.start(t); n.stop(t + d + 0.02);
+    }
+    function shaker(t, vol) {
+      if (!ctx || muted) return;
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx);
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 5200; f.Q.value = 1.2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol * 0.07, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+      n.connect(f); f.connect(g); g.connect(master);
+      n.start(t); n.stop(t + 0.09);
+    }
+    function tom(t, freq, vol) {
+      if (!ctx || muted) return;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      o.frequency.exponentialRampToValueAtTime(freq * 0.55, t + 0.2);
+      g.gain.setValueAtTime(vol * 0.24, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.3);
+    }
+    function crash(t, vol) {
+      if (!ctx || muted) return;
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx);
+      const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 4200;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol * 0.22, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+      n.connect(f); f.connect(g); g.connect(master);
+      if (revNode) g.connect(revNode);
+      n.start(t); n.stop(t + 1.15);
+    }
+    function riser(t, dur, vol) {
+      if (!ctx || muted) return;
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx); n.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 3.5;
+      f.frequency.setValueAtTime(240, t);
+      f.frequency.exponentialRampToValueAtTime(7200, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol * 0.22, t + dur * 0.92);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+      n.connect(f); f.connect(g); g.connect(master);
+      if (revNode) g.connect(revNode);
+      n.start(t); n.stop(t + dur + 0.15);
+      /* 音高同步上扬的哨音，增强紧张感 */
+      tone(420, t, dur, vol * 0.05, 'sawtooth', master, { glide: 2400, cut: 3000, cutTo: 6000 });
+    }
+    function whoosh(t, dur, vol) {
+      if (!ctx || muted) return;
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx); n.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.6;
+      f.frequency.setValueAtTime(3800, t);
+      f.frequency.exponentialRampToValueAtTime(320, t + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol * 0.2, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      n.connect(f); f.connect(g); g.connect(master);
+      n.start(t); n.stop(t + dur + 0.05);
+    }
+    function gong(t, vol) {
+      if (!ctx || muted) return;
+      const base = 96;
+      [1, 2.02, 2.98, 4.1, 5.43, 6.8].forEach((mul, i) => {
+        tone(base * mul, t + i * 0.006, 2.4 - i * 0.2, vol * (0.10 / (1 + i * 0.75)), 'sine', master);
+      });
+      const n = ctx.createBufferSource(); n.buffer = noise(ctx);
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol * 0.1, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
+      n.connect(f); f.connect(g); g.connect(master);
+      n.start(t); n.stop(t + 0.85);
+    }
+    function choir(freq, t, dur, vol) {
+      [0, 7, 12, 16].forEach((iv, i) => {
+        tone(freq * Math.pow(2, iv / 12), t, dur, vol * (0.05 - i * 0.007), 'sawtooth', master,
+          { detune: (i - 1.5) * 9, atk: 0.22, cut: 1100 + i * 260 });
+      });
+    }
+
+    /* ---- 鼓组：按风格驱动 ---- */
+    function drums(s, t, spb) {
+      const P = M.stepsPerBar;
+      const v = M.drumVol;
+      switch (M.drums) {
+        case 'four':
+          if (s % 4 === 0) kick(t, v);
+          if (s % 8 === 4) snare(t, v);
+          if (s % 2 === 0) hat(t, v, s % 8 === 6);
+          break;
+        case 'waltz':
+          if (s === 0) { kick(t, v); crash(t, v * 0.5); }
+          if (s === Math.round(P / 3)) snare(t, v * 0.7);
+          if (s % Math.round(P / 3) === 0) hat(t, v, true);
+          else if (s % 2 === 0) hat(t, v, false);
+          break;
+        case 'swing': {
+          const sw = M.swing || 0.18;
+          if (s === 0 || s === Math.round(P * 0.62)) kick(t, v);
+          if (s === Math.round(P / 4) || s === Math.round(P * 0.75)) snare(t, v);
+          if (s % 2 === 0) hat(t + (s % 4 === 2 ? spb * sw : 0), v, false);
+          if (s === 0) crash(t, v * 0.4);
+          break;
+        }
+        case 'rock':
+          if (s === 0 || s === 6 || s === 8 || s === 14) kick(t, v);
+          if (s === 4 || s === 12) snare(t, v * 1.1);
+          if (s % 2 === 0) hat(t, v, s === 6 || s === 14);
+          if (s === 0) crash(t, v * 0.6);
+          break;
+        case 'march':
+          if (s === 0 || s === 8) kick(t, v);
+          if (s % 4 === 2) snare(t, v * 0.85);
+          if (s >= 12 && s % 2 === 0) snare(t, v * 0.5);
+          if (s % 8 === 6) tom(t, 200, v * 0.6);
+          break;
+        case 'trap':
+          if (s === 0 || s === 6 || s === 10) kick(t, v);
+          if (s === 8) snare(t, v);
+          if (s % 2 === 0) hat(t, v, false);
+          if (s === 7 || s === 15) { hat(t + spb * 0.5, v * 0.7, false); hat(t + spb * 0.75, v * 0.5, false); }
+          break;
+        case 'lofi':
+          if (s === 0 || s === 10) kick(t, v * 0.85);
+          if (s === 4 || s === 12) snare(t, v * 0.55);
+          if (s % 2 === 0) hat(t, v * 0.45, false);
+          break;
+        case 'heart':
+          if (s === 0) { kick(t, v * 1.15); sub(t, v * 0.9); }
+          if (s === 3) kick(t, v * 0.55);
+          if (s === 8) { kick(t, v * 0.85); sub(t, v * 0.6); }
+          if (s === 11) kick(t, v * 0.4);
+          break;
+        case 'shaker':
+          if (s % 2 === 0) shaker(t, v);
+          if (s === 0) kick(t, v * 0.7);
+          if (s === 8) clap(t, v * 0.8);
+          break;
+        case 'taiko':
+          if (s % 4 === 0) { kick(t, v * 1.2); tom(t, 130, v); }
+          if (s === 6 || s === 14) tom(t, 175, v * 0.8);
+          if (s === 10) tom(t, 155, v * 0.7);
+          break;
+        case 'clap':
+          if (s === 0 || s === 10) kick(t, v);
+          if (s % 8 === 4) clap(t, v);
+          if (s % 2 === 0) hat(t, v * 0.8, false);
+          break;
+        default: break;
+      }
+    }
+
+    /* ---- 调度器（前瞻式，节奏稳） ---- */
+    function barIndex() { return Math.floor(step / M.stepsPerBar); }
+
+    function scheduleStep(s, t) {
+      const P = M.stepsPerBar;
+      const spb = 60 / (M.bpm * (fast ? 1.42 : 1)) / (P / 4);
+      const chord = M.chords[barIndex() % M.chords.length];
+      const swingOff = (M.swing && s % 2 === 1) ? spb * M.swing : 0;
+
+      if (M.drums && M.drums !== 'none') drums(s, t, spb);
+
+      if (s % P === 0) {
+        /* Pad 铺底和声：氛围感来源 */
+        const p = M.pad;
+        chord.forEach(iv => {
+          tone(midi(M.root + iv + 12 * p.oct), t, spb * P * p.dur,
+            p.vol * (1 + intensity * 0.5), p.wave, master,
+            { atk: p.atk, cut: p.cut, detune: rand(-6, 6) });
+        });
+        if (revNode) { /* pad 已连 master，混响经 revGain 全局送出 */ }
+      }
+
+      /* Bass */
+      const b = M.bass;
+      if (b.pat && b.pat.length) {
+        const bi = s % b.pat.length;
+        if (b.pat[bi]) {
+          tone(midi(M.root + b.oct * 12 + chord[0]), t, spb * (P / b.pat.length) * b.dur,
+            b.vol * (1 + intensity * 0.6), b.wave, master, { cut: b.cut, atk: 0.01 });
+        }
+      }
+
+      /* Arp 琶音 */
+      const a = M.arp;
+      if (a && a.pat && a.pat.length) {
+        const unit = P / a.pat.length;
+        if (s % unit === 0) {
+          const deg = a.pat[Math.floor(s / unit) % a.pat.length];
+          if (deg >= 0) {
+            const note = M.root + 12 * a.oct + chord[deg % chord.length] + 12 * Math.floor(deg / chord.length);
+            tone(midi(note), t + swingOff, spb * unit * a.dur, a.vol, a.wave, dlyNode || master,
+              { cut: 4200, atk: 0.004 });
+            if (M.bells && Math.random() < 0.16) bell(midi(note + 12), t + swingOff, 0.9, 0.02);
+          }
+        }
+      }
+
+      /* Lead 主旋律 */
+      const ld = M.lead;
+      if (ld && ld.pat && ld.pat.length) {
+        const unit = P / ld.pat.length;
+        if (s % unit === 0) {
+          const deg = ld.pat[Math.floor(s / unit) % ld.pat.length];
+          if (deg >= 0 && deg !== null) {
+            const note = M.root + 12 * (ld.oct || 2) + chord[deg % chord.length]
+              + 12 * Math.floor(deg / chord.length) + (ld.extra || 0);
+            tone(midi(note), t + swingOff, spb * unit * (ld.dur || 0.85), ld.vol || 0.05,
+              ld.wave || 'triangle', dlyNode || master, { atk: ld.atk || 0.02, cut: 5200 });
+          }
+        }
+      }
+    }
+
+    function stepDur() {
+      return 60 / (M.bpm * (fast ? 1.42 : 1)) / (M.stepsPerBar / 4);
+    }
+
+    function tick() {
+      const c = getCtx();
+      if (!c || !bgmOn) return;
+      while (nextTime < c.currentTime + 0.25) {
+        scheduleStep(step, Math.max(nextTime, c.currentTime + 0.02));
+        nextTime += stepDur();
+        step++;
+      }
+      timer = setTimeout(tick, 30);
+    }
+
+    function startBGM() {
+      const c = getCtx();
+      if (!c || bgmOn) return;
+      bgmOn = true;
+      step = 0;
+      nextTime = c.currentTime + 0.08;
+      tick();
+    }
+    function stopBGM() {
+      bgmOn = false;
+      if (timer) { clearTimeout(timer); timer = null; }
+    }
+
+    /* ---- 场景音效 A：点名前（Risers + 倒数） ---- */
+    function sfxPrepare() {
+      const c = getCtx(); if (!c) return;
+      const t = c.currentTime;
+      riser(t, 0.85, 1);
+      [0, 0.34, 0.58, 0.74].forEach((off, i) => {
+        bell(midi(72 + i * 4), t + off, 0.32, 0.055 + i * 0.012);
+      });
+      kick(t + 0.86, 1.15);
+      sub(t + 0.86, 1.2);
+      whoosh(t + 0.86, 0.45, 1.1);
+    }
+
+    /* ---- 场景音效 B：摇人中（加速脉冲） ---- */
+    let rollTicks = 0;
+    function sfxRoll(ratio) {
+      const c = getCtx(); if (!c || muted) return;
+      const t = c.currentTime;
+      const r = clamp(ratio || 0, 0, 1);
+      const f = 520 + r * 900 + rand(-40, 40);
+      tone(f, t, 0.045, 0.055, 'square', master, { cut: 5200 });
+      if (rollTicks % 4 === 0) tone(f * 2, t, 0.03, 0.028, 'triangle', master);
+      if (rollTicks % 16 === 0) { tom(t, 150 + r * 90, 0.7); }
+      if (rollTicks % 32 === 0) crash(t, 0.35 * (0.5 + r * 0.5));
+      rollTicks++;
+    }
+    function sfxRollReset() { rollTicks = 0; }
+
+    /* ---- 场景音效 C：抽中时（号角庆典） ---- */
+    function sfxWin(flavor) {
+      const c = getCtx(); if (!c) return;
+      const t = c.currentTime;
+      flavor = flavor || 'fanfare';
+      kick(t, 1.3); sub(t, 1.25); crash(t, 1.05);
+
+      if (flavor === 'gong') {
+        gong(t, 1.2);
+        setTimeout(() => { const cc = getCtx(); if (cc) gong(cc.currentTime, 0.7); }, 380);
+      } else if (flavor === 'chime') {
+        [0, 4, 7, 12, 16, 19, 24].forEach((iv, i) => {
+          bell(midi(69 + iv), t + i * 0.055, 1.5, 0.075);
+        });
+      } else if (flavor === 'epic') {
+        choir(midi(45), t, 2.2, 1.5);
+        [0, 7, 12, 19].forEach((iv, i) => {
+          tone(midi(45 + iv), t + 0.02 * i, 1.6, 0.075, 'sawtooth', master, { atk: 0.05, cut: 2600 });
+        });
+        [0, 0.12, 0.24].forEach((o, i) => tom(t + o, 90 + i * 25, 1.1));
+      } else if (flavor === 'arcade') {
+        [0, 4, 7, 12, 12, 19, 24].forEach((iv, i) => {
+          tone(midi(72 + iv), t + i * 0.06, 0.16, 0.085, 'square', master, { cut: 6000 });
+        });
+        bell(midi(96), t + 0.45, 0.7, 0.06);
+      } else {
+        /* fanfare */
+        [0, 4, 7, 12, 16, 19, 24].forEach((iv, i) => {
+          tone(midi(60 + iv), t + i * 0.062, 0.85, 0.085, 'sawtooth', master,
+            { atk: 0.012, cut: 3400, detune: rand(-5, 5) });
+        });
+      }
+      /* 花瓣式高频闪烁 */
+      for (let i = 0; i < 9; i++) {
+        setTimeout(() => { const cc = getCtx(); if (cc) bell(midi(84 + randInt(0, 14)), cc.currentTime, 0.7, 0.035); },
+          260 + i * 95);
+      }
+    }
+
+    /* ---- 通用交互音 ---- */
+    function sfxClick() {
+      const c = getCtx(); if (!c || muted) return;
+      tone(880, c.currentTime, 0.06, 0.05, 'triangle', master);
+    }
+    function sfxFlip() {
+      const c = getCtx(); if (!c || muted) return;
+      whoosh(c.currentTime, 0.18, 0.7);
+      tone(1200, c.currentTime, 0.09, 0.04, 'triangle', master, { cut: 6000 });
+    }
+
+    function initAutoPlay() {
+      const trigger = () => {
+        if (!muted) startBGM();
+        window.removeEventListener('pointerdown', trigger);
+        window.removeEventListener('keydown', trigger);
+        window.removeEventListener('touchstart', trigger);
+      };
+      window.addEventListener('pointerdown', trigger);
+      window.addEventListener('keydown', trigger);
+      window.addEventListener('touchstart', trigger);
+    }
+
+    return {
+      init: getCtx,
+      startBGM, stopBGM, initAutoPlay, sfxPrepare, sfxRoll, sfxRollReset,
+      sfxWin, sfxClick, sfxFlip, riser, whoosh, bell, tone, midi, kick, sub, crash, gong, choir,
+      setIntensity: v => { intensity = v; },
+      setFast: v => { fast = !!v; dlyNode && (dlyNode.delayTime.value = 60 / (M.bpm * (v ? 1.42 : 1)) * 0.75); },
+      toggleBGM: () => { if (bgmOn) { stopBGM(); return false; } else { startBGM(); return true; } },
+      toggleMute: () => { muted = !muted; if (muted) stopBGM(); else startBGM(); return muted; },
+      isMuted: () => muted,
+      isPlaying: () => bgmOn,
+      isFast: () => fast
+    };
+  })();
+
+  /* ------------------------------------------------------------------ *
+   *  3. 特效引擎：礼花 / 烟花 / 星光 / 冲击环 / 速度线 / 文字粒子 / 闪白
+   * ------------------------------------------------------------------ */
+  const FX = (function () {
+    const cv = document.getElementById('fx-canvas');
+    const ctx = cv.getContext('2d');
+    const fv = document.getElementById('flash-canvas');
+    const fctx = fv ? fv.getContext('2d') : null;
+    let parts = [], raf = null, dpr = 1, flashA = 0, flashColor = '#fff';
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      [cv, fv].forEach(c => {
+        if (!c) return;
+        c.width = Math.floor(innerWidth * dpr);
+        c.height = Math.floor(innerHeight * dpr);
+      });
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (fctx) fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const PALETTE = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#fde047', '#22d3ee', '#ffffff'];
+
+    function push(p) { parts.push(p); if (!raf) loop(); }
+    function ensure() { if (!raf) loop(); }
+
+    function confetti(x, y, n, colors) {
+      const cl = colors || PALETTE;
+      for (let i = 0; i < n; i++) {
+        push({
+          t: 'rect',
+          x: x + rand(-60, 60), y: y + rand(-24, 24),
+          vx: rand(-9, 9), vy: rand(-19, -4),
+          w: rand(6, 15), h: rand(4, 10),
+          rot: rand(0, 360), vrot: rand(-16, 16),
+          g: 0.4, life: 1, decay: rand(0.006, 0.013), color: pick(cl)
+        });
+      }
+    }
+
+    function sparks(x, y, n, color) {
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, Math.PI * 2), sp = rand(2, 13);
+        push({
+          t: 'dot', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          r: rand(1.5, 4), g: 0.13, life: 1, decay: rand(0.014, 0.03),
+          color: color || pick(PALETTE)
+        });
+      }
+    }
+
+    function stars(x, y, n, color) {
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, Math.PI * 2), sp = rand(1, 7);
+        push({
+          t: 'star', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.5,
+          r: rand(3, 7), rot: rand(0, 360), vrot: rand(-9, 9),
+          g: 0.05, life: 1, decay: rand(0.008, 0.018), color: color || pick(PALETTE)
+        });
+      }
+    }
+
+    function ring(x, y, color, maxR, n) {
+      for (let i = 0; i < (n || 2); i++) {
+        push({ t: 'ring', x, y, r: 6 + i * 22, grow: 7 + i * 2.6, life: 1, decay: 0.03, lw: 4 - i, color: color || '#fff' });
+      }
+    }
+
+    function textPop(text, x, y, color, size) {
+      push({
+        t: 'text', x, y, vx: rand(-1.2, 1.2), vy: -3.2, txt: text,
+        r: size || 26, g: 0.02, life: 1, decay: 0.008,
+        rot: rand(-9, 9), color: color || '#fff'
+      });
+    }
+
+    function firework(x, y, color) {
+      const c0 = color || pick(PALETTE);
+      const c1 = pick(PALETTE);
+      const n = randInt(46, 78);
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 + rand(-0.06, 0.06);
+        const sp = rand(3.5, 11) * (Math.random() < 0.35 ? 1.5 : 1);
+        push({
+          t: 'dot', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          r: rand(1.6, 3.6), g: 0.11, life: 1, decay: rand(0.011, 0.022),
+          trail: true, color: Math.random() < 0.5 ? c0 : c1
+        });
+      }
+      ring(x, y, c0, 60);
+      flash(c0, 0.16);
+    }
+
+    function fireworksShow(count, ms) {
+      count = count || 6;
+      ms = ms || 1900;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          firework(rand(innerWidth * 0.12, innerWidth * 0.88), rand(innerHeight * 0.1, innerHeight * 0.55));
+        }, i * (ms / count) + rand(0, 120));
+      }
+    }
+
+    function speedLines(dur, color) {
+      const n = 34;
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, Math.PI * 2), sp = rand(10, 30);
+        push({
+          t: 'line', x: innerWidth / 2, y: innerHeight / 2,
+          vx: Math.cos(a) * sp * 3, vy: Math.sin(a) * sp * 3,
+          len: rand(30, 110), life: 1, decay: 0.1,
+          color: color || 'rgba(255,255,255,.75)'
+        });
+      }
+      ensure();
+      setTimeout(() => { }, dur);
+    }
+
+    function emojiBurst(x, y, chars, n) {
+      chars = chars || ['⭐', '✨', '🎉', '💫', '🌟'];
+      n = n || 14;
+      for (let i = 0; i < n; i++) {
+        const a = rand(-Math.PI, 0), sp = rand(3, 11);
+        push({
+          t: 'text', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+          txt: pick(chars), r: rand(18, 40), g: 0.24, life: 1, decay: 0.01,
+          rot: rand(-30, 30), color: '#fff'
+        });
+      }
+    }
+
+    function shockwave() {
+      const cx = innerWidth / 2, cy = innerHeight * 0.45;
+      for (let i = 0; i < 3; i++) ring(cx, cy, '#ffffff', 0, 1);
+      speedLines(400);
+    }
+
+    function flash(color, alpha) {
+      flashColor = color || '#fff';
+      flashA = alpha === undefined ? 0.32 : alpha;
+    }
+
+    function shake(power) {
+      const d = document.documentElement;
+      d.style.setProperty('--shake-p', power || 1);
+      document.body.classList.remove('screen-shake');
+      void document.body.offsetWidth;
+      document.body.classList.add('screen-shake');
+      setTimeout(() => document.body.classList.remove('screen-shake'), 420);
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      if (fctx) {
+        fctx.clearRect(0, 0, innerWidth, innerHeight);
+        if (flashA > 0.002) {
+          fctx.globalAlpha = flashA;
+          fctx.fillStyle = flashColor;
+          fctx.fillRect(0, 0, innerWidth, innerHeight);
+          fctx.globalAlpha = 1;
+          flashA *= 0.82;
+        } else flashA = 0;
+      }
+
+      const H = innerHeight;
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i];
+        p.x += p.vx; p.y += p.vy;
+        p.vy += p.g || 0;
+        p.vx *= 0.995;
+        p.life -= p.decay;
+        if (p.t === 'ring') p.r += p.grow;
+        if (p.rot !== undefined) p.rot += p.vrot || 0;
+
+        if (p.life <= 0 || p.y > H + 120) { parts.splice(i, 1); continue; }
+
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.rot) ctx.rotate(p.rot * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        ctx.strokeStyle = p.color;
+
+        switch (p.t) {
+          case 'rect':
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            break;
+          case 'dot':
+            ctx.shadowBlur = p.trail ? 12 : 6;
+            ctx.shadowColor = p.color;
+            ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 6.284); ctx.fill();
+            ctx.shadowBlur = 0;
+            break;
+          case 'star': {
+            ctx.shadowBlur = 14; ctx.shadowColor = p.color;
+            ctx.beginPath();
+            for (let k = 0; k < 5; k++) {
+              const a1 = (k * 4 * Math.PI) / 5 - Math.PI / 2;
+              const a2 = ((k * 4 + 2) * Math.PI) / 5 - Math.PI / 2;
+              ctx.lineTo(Math.cos(a1) * p.r, Math.sin(a1) * p.r);
+              ctx.lineTo(Math.cos(a2) * p.r * 0.42, Math.sin(a2) * p.r * 0.42);
+            }
+            ctx.closePath(); ctx.fill();
+            ctx.shadowBlur = 0;
+            break;
+          }
+          case 'ring':
+            ctx.lineWidth = p.lw;
+            ctx.globalAlpha = Math.max(0, p.life) * 0.85;
+            ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 6.284); ctx.stroke();
+            break;
+          case 'text':
+            ctx.font = '900 ' + p.r + 'px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 12; ctx.shadowColor = 'rgba(0,0,0,.6)';
+            ctx.fillText(p.txt, 0, 0);
+            ctx.shadowBlur = 0;
+            break;
+          case 'line':
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, 0);
+            ctx.lineTo(-p.vx * 1.6, -p.vy * 1.6); ctx.stroke();
+            break;
+        }
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+
+      if (parts.length) raf = requestAnimationFrame(loop);
+      else { raf = null; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+    }
+
+    function clear() { parts = []; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+
+    return {
+      confetti, sparks, stars, ring, textPop, firework, fireworksShow,
+      speedLines, emojiBurst, shockwave, flash, shake, clear,
+      center: () => ({ x: innerWidth / 2, y: innerHeight * 0.45 })
+    };
+  })();
+
+  /* ------------------------------------------------------------------ *
+   *  4. 名单数据层
+   * ------------------------------------------------------------------ */
+  const PKEY = 'CLASSROOM_ROLLCALL_V2_STUDENTS';
+  const PKEY_V1 = 'CLASSROOM_ROLLCALL_STUDENTS_GLOBAL';
+  /* 构建时会注入 const DEFAULT_STUDENTS_RAW = "..."（同一 script 作用域，不挂 window） */
+  const DEFAULT_RAW = (typeof DEFAULT_STUDENTS_RAW !== 'undefined' && DEFAULT_STUDENTS_RAW)
+    || '01 张三\n02 李四';
+
+  let studentList = [], remainPool = [], historyList = [];
+  let rolling = false;
+
+  function parseText(t) {
+    if (!t || !t.trim()) return [];
+    return t.split(/\r?\n/).map((line, idx) => {
+      const tr = line.trim();
+      if (!tr || tr.charAt(0) === '#') return null;
+      const pts = tr.split(/[\s,，、\t;；]+/).filter(Boolean);
+      if (pts.length >= 2) return { id: pts[0], name: pts.slice(1).join(' ') };
+      return { id: String(idx + 1).padStart(2, '0'), name: pts[0] || '' };
+    }).filter(s => s && s.name);
+  }
+  function formatText(list) { return list.map(s => s.id + ' ' + s.name).join('\n'); }
+
+  function readSaved() {
+    let raw = localStorage.getItem(PKEY);
+    if (!raw || !raw.trim()) raw = localStorage.getItem(PKEY_V1);
+    return raw && raw.trim() ? raw : '';
+  }
+
+  function loadStudents() {
+    const saved = readSaved();
+    studentList = parseText(saved || DEFAULT_RAW);
+    if (!studentList.length) studentList = parseText(DEFAULT_RAW);
+    resetPool(true);
+  }
+
+  function saveStudents(raw) {
+    try { localStorage.setItem(PKEY, raw); localStorage.setItem(PKEY_V1, raw); } catch (e) { }
+  }
+
+  function resetPool(silent) {
+    remainPool = studentList.slice();
+    historyList = [];
+    updateStats();
+    renderHistory();
+    if (!silent && typeof onResetHook === 'function') onResetHook();
+  }
+
+  function updateStats() {
+    const a = document.getElementById('stat-total');
+    if (a) a.textContent = studentList.length;
+    const b = document.getElementById('stat-remain');
+    if (b) b.textContent = remainPool.length;
+    const c = document.getElementById('stat-called');
+    if (c) c.textContent = historyList.length;
+  }
+
+  function getCount() {
+    const el = document.getElementById('sel-count');
+    return clamp(parseInt(el && el.value) || 1, 1, 6);
+  }
+  function noRepeat() {
+    const el = document.getElementById('chk-norepeat');
+    return el ? el.checked : true;
+  }
+
+  function pickWinners() {
+    const usePool = noRepeat();
+    let pool = usePool ? remainPool : studentList;
+    if (!pool.length) {
+      toast('本轮所有同学都点过一遍啦，已自动开启新一轮 🔄');
+      resetPool(true);
+      pool = usePool ? remainPool : studentList;
+    }
+    const n = Math.min(getCount(), pool.length);
+    const arr = pool.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    const chosen = arr.slice(0, n);
+    chosen.forEach(c => {
+      if (usePool) {
+        const i = remainPool.findIndex(s => s.id === c.id && s.name === c.name);
+        if (i > -1) remainPool.splice(i, 1);
+      }
+      historyList.push(c);
+    });
+    updateStats();
+    return chosen;
+  }
+
+  /* ---- 历史记录条 ---- */
+  function renderHistory() {
+    const track = document.getElementById('themed-history-list');
+    if (!track) return;
+    track.innerHTML = '';
+    if (!historyList.length) {
+      const e = document.createElement('div');
+      e.className = 'history-empty';
+      e.textContent = '还没有抽取记录，按空格或点击下方按钮开始吧 ~';
+      track.appendChild(e);
+      return;
+    }
+    historyList.slice().reverse().forEach(w => addHistoryPill(w, track, false));
+  }
+  function addHistoryPill(w, track, prepend) {
+    if (!track) track = document.getElementById('themed-history-list');
+    if (!track) return;
+    const empty = track.querySelector('.history-empty');
+    if (empty) empty.remove();
+    const pill = document.createElement('div');
+    pill.className = 'hist-pill';
+    pill.innerHTML = '<span>' + (window.THEME_ICON || '🎯') + '</span>' +
+      '<span class="id-tag" style="opacity:.75">' + w.id + '</span> <b>' + w.name + '</b>';
+    if (typeof themedPillStyle === 'function') themedPillStyle(pill);
+    if (prepend === false) track.appendChild(pill); else track.prepend(pill);
+    track.scrollLeft = 0;
+  }
+  function pushHistory(winners) {
+    winners.forEach(w => addHistoryPill(w, null, true));
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  5. 开始 / 停止
+   * ------------------------------------------------------------------ */
+  const btnStart = document.getElementById('btn-start');
+  const btnIcon = document.getElementById('btn-icon');
+  const btnText = document.getElementById('btn-text');
+  const ORIG_ICON = btnIcon ? btnIcon.textContent : '▶';
+  const ORIG_TEXT = btnText ? btnText.textContent : '开始点名';
+
+  function setBtn(stop) {
+    if (!btnStart) return;
+    btnStart.classList.toggle('stop', stop);
+    if (btnIcon) btnIcon.textContent = stop ? '⏹' : ORIG_ICON;
+    if (btnText) btnText.textContent = stop ? '停止点名' : ORIG_TEXT;
+  }
+
+  function startRolling() {
+    if (!studentList.length) { toast('请先在【名单管理】里添加学生名单 📝'); return; }
+    rolling = true;
+    setBtn(true);
+    Music.setFast(true);
+    Music.setIntensity(1);
+    Music.sfxPrepare();          // 场景音效 A：点名前
+    Music.sfxRollReset();
+    FX.shockwave();
+    if (typeof stageStartRoll === 'function') stageStartRoll();
+  }
+
+  function stopRolling() {
+    rolling = false;
+    setBtn(false);
+    Music.setFast(false);
+    Music.setIntensity(0);
+    const winners = pickWinners();
+    if (typeof stageStopRoll === 'function') stageStopRoll(winners);
+    if (typeof revealWinners === 'function') revealWinners(winners);
+    else defaultReveal(winners);
+    Music.sfxWin(window.THEME_SFX && window.THEME_SFX.win);
+    pushHistory(winners);
+    /* 抽中特效：礼花 + 多层烟花 + 星光 */
+    const c = FX.center();
+    FX.confetti(c.x, c.y, 130);
+    FX.sparks(c.x, c.y, 40, '#ffffff');
+    FX.stars(c.x, c.y, 26);
+    FX.ring(c.x, c.y);
+    FX.fireworksShow(4, 1500);
+    FX.flash('#ffffff', 0.3);
+    FX.shake(1);
+  }
+
+  function toggleRoll() { rolling ? stopRolling() : startRolling(); }
+
+  if (btnStart) btnStart.addEventListener('click', toggleRoll);
+
+  /* ---- 通用揭晓浮层（未自定义 revealWinners 的模板走这里） ---- */
+  function defaultReveal(winners) {
+    let box = document.getElementById('tc-reveal');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'tc-reveal';
+      box.className = 'tc-reveal';
+      box.innerHTML = '<div class="tc-reveal-title">🎉 恭喜以下同学被点到 🎉</div><div class="tc-reveal-cards"></div>';
+      (document.querySelector('.tc-stage') || document.body).appendChild(box);
+    }
+    const cards = box.querySelector('.tc-reveal-cards');
+    cards.innerHTML = '';
+    winners.forEach((w, i) => {
+      const d = document.createElement('div');
+      d.className = 'tc-reveal-card';
+      d.style.animationDelay = (i * 0.09) + 's';
+      d.innerHTML = '<div class="rc-id id-tag">' + w.id + '</div><div class="rc-name">' + w.name + '</div>';
+      cards.appendChild(d);
+    });
+    box.classList.add('active');
+  }
+  function clearReveal() {
+    const box = document.getElementById('tc-reveal');
+    if (box) box.classList.remove('active');
+    if (typeof stageClearReveal === 'function') stageClearReveal();
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  6. 键盘与按钮
+   * ------------------------------------------------------------------ */
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      const p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      if (p && p.catch) p.catch(() => { });
+    } else if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
+  }
+
+  window.addEventListener('keydown', e => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+      if (e.code === 'Escape') e.target.blur();
+      return;
+    }
+    const modalOpen = $$('.tc-modal-backdrop.active').length > 0;
+    if (e.code === 'Space' || e.code === 'Enter') {
+      if (modalOpen) return;
+      e.preventDefault();
+      toggleRoll();
+    } else if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault(); toggleFullscreen();
+    } else if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      confirmBox('确认重置本轮抽取记录吗？（学生名单不会被修改）', () => {
+        resetPool(false);
+        clearReveal();
+        FX.clear();
+        Music.sfxClick();
+        toast('已重置本轮记录 🔄');
+      }, '重置');
+    } else if (e.key >= '1' && e.key <= '6') {
+      const sel = document.getElementById('sel-count');
+      if (sel && !modalOpen) { sel.value = e.key; toast('每次抽取 ' + e.key + ' 人'); Music.sfxClick(); }
+    } else if (e.key === 'm' || e.key === 'M') {
+      const btn = document.getElementById('btn-sound');
+      if (btn) btn.click();
+    } else if (e.key === 'h' || e.key === 'H') {
+      const btn = document.getElementById('btn-manage');
+      if (btn) btn.click();
+    } else if (e.code === 'Escape') {
+      $$('.tc-modal-backdrop.active').forEach(m => m.classList.remove('active'));
+      clearReveal();
+    }
+  });
+
+  const btnFs = document.getElementById('btn-fullscreen');
+  if (btnFs) btnFs.addEventListener('click', toggleFullscreen);
+
+  const btnBgm = document.getElementById('btn-bgm');
+  if (btnBgm) btnBgm.addEventListener('click', () => {
+    const on = Music.toggleBGM();
+    btnBgm.textContent = on ? '🎵 氛围音: 开' : '🎵 氛围音: 关';
+    btnBgm.classList.toggle('off', !on);
+  });
+  const btnSound = document.getElementById('btn-sound');
+  if (btnSound) btnSound.addEventListener('click', () => {
+    const m = Music.toggleMute();
+    btnSound.textContent = m ? '🔇 音效: 关' : '🔊 音效: 开';
+    btnSound.classList.toggle('off', m);
+    if (btnBgm) {
+      btnBgm.textContent = (!m && Music.isPlaying()) ? '🎵 氛围音: 开' : '🎵 氛围音: 关';
+      btnBgm.classList.toggle('off', m || !Music.isPlaying());
+    }
+  });
+
+  const selCount = document.getElementById('sel-count');
+  if (selCount) selCount.addEventListener('change', () => { Music.sfxClick(); toast('每次抽取 ' + selCount.value + ' 人'); });
+
+  /* ------------------------------------------------------------------ *
+   *  7. 名单管理弹窗：导入 / 导出 / 手动编辑 / 打包进 HTML
+   * ------------------------------------------------------------------ */
+  const modal = document.getElementById('modal-manage');
+  const txtInput = document.getElementById('txt-input');
+
+  function openModal() {
+    if (txtInput) txtInput.value = formatText(studentList);
+    if (modal) modal.classList.add('active');
+    Music.sfxClick();
+  }
+  const btnManage = document.getElementById('btn-manage');
+  if (btnManage) btnManage.addEventListener('click', openModal);
+  const modalClose = document.getElementById('modal-close');
+  if (modalClose) modalClose.addEventListener('click', () => modal.classList.remove('active'));
+  if (modal) modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('active'); });
+
+  const btnSave = document.getElementById('btn-save-list');
+  if (btnSave) btnSave.addEventListener('click', () => {
+    const text = (txtInput.value || '').trim();
+    if (!text) { toast('名单内容不能为空！'); return; }
+    const list = parseText(text);
+    if (!list.length) { toast('没有解析到有效名单，请检查格式'); return; }
+    saveStudents(text);
+    studentList = list;
+    resetPool(true);
+    clearReveal();
+    if (typeof onResetHook === 'function') onResetHook();
+    modal.classList.remove('active');
+    toast('已保存 ' + list.length + ' 位同学，全部模板同步生效 ✅');
+    Music.sfxClick();
+  });
+
+  const btnRestore = document.getElementById('btn-restore-default');
+  if (btnRestore) btnRestore.addEventListener('click', () => {
+    confirmBox('确认恢复为本页面内置的默认名单吗？', () => {
+      localStorage.removeItem(PKEY);
+      localStorage.removeItem(PKEY_V1);
+      studentList = parseText(DEFAULT_RAW);
+      saveStudents(DEFAULT_RAW);
+      if (txtInput) txtInput.value = DEFAULT_RAW;
+      resetPool(true);
+      clearReveal();
+      if (typeof onResetHook === 'function') onResetHook();
+      modal.classList.remove('active');
+      toast('已恢复默认名单（' + studentList.length + ' 人）');
+    }, '恢复默认');
+  });
+
+  const fileInput = document.getElementById('file-input');
+  const btnImport = document.getElementById('btn-import-txt');
+  if (btnImport) btnImport.addEventListener('click', () => fileInput && fileInput.click());
+  if (fileInput) fileInput.addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const raw = String(evt.target.result || '').replace(/^\uFEFF/, '');
+      const list = parseText(raw);
+      if (!list.length) { toast('文件里没读到有效名单，请检查格式'); return; }
+      saveStudents(raw);
+      studentList = list;
+      resetPool(true);
+      clearReveal();
+      if (typeof onResetHook === 'function') onResetHook();
+      if (txtInput) txtInput.value = formatText(list);
+      toast('已导入【' + f.name + '】共 ' + list.length + ' 人，已同步生效 ✅');
+      Music.sfxClick();
+    };
+    reader.readAsText(f, 'utf-8');
+    fileInput.value = '';
+  });
+
+  const btnExport = document.getElementById('btn-export-txt');
+  if (btnExport) btnExport.addEventListener('click', () => {
+    download('班级名单.txt', (txtInput && txtInput.value) ? txtInput.value : formatText(studentList));
+    toast('名单已导出为 班级名单.txt 💾');
+  });
+
+  function download(filename, text, mime) {
+    const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  }
+
+  /* 把当前名单直接打包进一份新的 HTML（导入/修改的内容直接填充到 html） */
+  const btnExportHtml = document.getElementById('btn-export-html');
+  if (btnExportHtml) btnExportHtml.addEventListener('click', () => {
+    const raw = (txtInput && txtInput.value.trim()) ? txtInput.value.trim() : formatText(studentList);
+    exportHtmlWith(raw);
+  });
+
+  function exportHtmlWith(raw) {
+    download('点名系统-名单已内嵌.html', buildExportHtml(raw), 'text/html');
+    toast('已导出一份「名单已内嵌」的 HTML，可直接分发给学生机 ✅', 3200);
+  }
+
+  /* 返回一份「名单已写死在源码里」的完整 HTML 字符串 */
+  function buildExportHtml(raw) {
+    const clone = document.documentElement.cloneNode(true);
+    clone.querySelectorAll('[data-dyn]').forEach(el => { el.innerHTML = ''; });
+    clone.querySelectorAll('[data-fitsize]').forEach(el => {
+      el.style.gridTemplateColumns = ''; el.style.gridAutoRows = ''; el.style.gap = '';
+    });
+    clone.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
+    clone.querySelectorAll('.screen-shake,.hopping,.flipped,.rolling,.on,.picked,.lit,.open,.cracked')
+      .forEach(el => el.classList.remove('screen-shake', 'hopping', 'flipped', 'rolling', 'on', 'picked', 'lit', 'open', 'cracked'));
+    clone.querySelectorAll('textarea').forEach(t => { t.textContent = ''; });
+    clone.querySelectorAll('select').forEach(s => {
+      const d = s.querySelector('option[selected]');
+      s.value = d ? d.value : (s.options[0] && s.options[0].value) || '';
+      Array.from(s.options).forEach(o => o.removeAttribute('selected'));
+      if (d) d.setAttribute('selected', 'selected');
+    });
+    clone.querySelectorAll('input[type=checkbox]').forEach(i => {
+      i.checked = i.hasAttribute('checked');
+      i.removeAttribute('data-checked');
+      if (i.checked) i.setAttribute('checked', 'checked'); else i.removeAttribute('checked');
+    });
+    const bt = clone.querySelector('#btn-text'); if (bt) bt.textContent = ORIG_TEXT;
+    const bi = clone.querySelector('#btn-icon'); if (bi) bi.textContent = ORIG_ICON;
+    const bs = clone.querySelector('#btn-start'); if (bs) bs.classList.remove('stop');
+    const b1 = clone.querySelector('#btn-bgm'); if (b1) { b1.textContent = '🎵 氛围音: 开'; b1.classList.remove('off'); }
+    const b2 = clone.querySelector('#btn-sound'); if (b2) { b2.textContent = '🔊 音效: 开'; b2.classList.remove('off'); }
+
+    let html = '<!DOCTYPE html>\n' + clone.outerHTML;
+    const marker = /(const DEFAULT_STUDENTS_RAW = ")([^"]*)(";)/;
+    if (marker.test(html)) {
+      html = html.replace(marker, (m, p1, p2, p3) => p1 + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + p3);
+    }
+    return html;
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  8. 跨标签页同步 + 尝试读取同目录 班级名单.txt
+   * ------------------------------------------------------------------ */
+  window.addEventListener('storage', e => {
+    if (e.key === PKEY && e.newValue && e.newValue.trim()) {
+      studentList = parseText(e.newValue);
+      resetPool(true);
+      clearReveal();
+      if (typeof onResetHook === 'function') onResetHook();
+      toast('名单已从其它页面同步更新 ✅');
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    const saved = readSaved();
+    if (saved && formatText(studentList) !== formatText(parseText(saved))) {
+      studentList = parseText(saved);
+      resetPool(true);
+      clearReveal();
+      if (typeof onResetHook === 'function') onResetHook();
+    }
+  });
+
+  function tryLocalTxt() {
+    if (readSaved()) return;                       // 已有用户数据，不覆盖
+    if (!location.protocol.startsWith('http')) return; // file:// 下浏览器禁止读取，静默跳过
+    fetch('班级名单.txt', { cache: 'no-store' })
+      .then(r => r.ok ? r.text() : null)
+      .then(t => {
+        if (!t) return;
+        const list = parseText(t);
+        if (!list.length) return;
+        studentList = list;
+        saveStudents(t);
+        resetPool(true);
+        if (typeof onResetHook === 'function') onResetHook();
+      })
+      .catch(() => { });
+  }
+
+  /* ------------------------------------------------------------------ *
+   *  9. 启动
+   * ------------------------------------------------------------------ */
+  let booted = false;
+  function boot() {
+    if (booted) return;
+    booted = true;
+    loadStudents();
+    Music.initAutoPlay();
+    if (typeof stageInit === 'function') stageInit();
+    setTimeout(tryLocalTxt, 300);
+
+    /* 舞台尺寸变化时重排主题网格 */
+    let rt = null;
+    const relayout = () => {
+      clearTimeout(rt);
+      rt = setTimeout(() => {
+        if (typeof stageLayout === 'function') stageLayout();
+        const box = document.querySelector('.fit-grid');
+        if (box && box._relayout) box._relayout();
+      }, 120);
+    };
+    window.addEventListener('resize', relayout);
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(relayout);
+      const stage = document.querySelector('.tc-stage');
+      if (stage) ro.observe(stage);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+  if (document.readyState !== 'loading') boot();
+
+  /* ------------------------------------------------------------------ *
+   *  10. 对外暴露给模板脚本
+   * ------------------------------------------------------------------ */
+  window.TC = {
+    $, $$, rand, randInt, pick, clamp, toast, confirmBox, autoFitGrid,
+    Music, SoundFX: Music, FX,
+    get students() { return studentList; },
+    get remain() { return remainPool; },
+    get history() { return historyList; },
+    get rolling() { return rolling; },
+    pickWinners, resetPool, pushHistory, clearReveal, defaultReveal,
+    setBtn, toggleRoll, download, parseText, formatText,
+    buildExportHtml, exportHtmlWith,
+    isNoRepeat: noRepeat, getCount
+  };
+})();
+
+
+/* ===== 主题舞台脚本：霓虹极速点名 ===== */
+/* ── 霓虹极速点名 · 舞台脚本 ───────────────────────────────────────── */
+
+var nxCv = TC.$('#nx-tunnel');
+var nxCtx = nxCv ? nxCv.getContext('2d') : null;
+var nxCore = TC.$('#nx-core');
+var nxNm = TC.$('#nx-nm');
+var nxSid = TC.$('#nx-sid');
+var nxBar = TC.$('#nx-bar-fill');
+var nxPool = TC.$('#nx-pool');
+var nxPoolNum = TC.$('#nx-pool-num');
+var nxReveal = TC.$('#nx-reveal');
+var nxBox = TC.$('#nx-rv-box');
+
+var nxChips = [], nxHot = -1;
+var NX_MAX_CHIP = 62;
+var nxTimer = null, nxSpeedTimer = null, nxLockTimer = null;
+var nxLocking = false, nxOpenAfterLock = false, nxT0 = 0;
+
+/* ---------- 背景：霓虹网格隧道 ---------- */
+var nxRaf = null, nxT = 0, nxSpd = 1, nxTar = 1;
+var nxW = 0, nxH = 0, nxDpr = 1;
+
+function nxResize() {
+  if (!nxCv || !nxCtx) return;
+  var host = nxCv.parentElement;
+  var w = host ? host.clientWidth : 0, h = host ? host.clientHeight : 0;
+  if (w <= 0 || h <= 0) return;
+  nxDpr = Math.min(window.devicePixelRatio || 1, 2);
+  nxCv.width = Math.round(w * nxDpr);
+  nxCv.height = Math.round(h * nxDpr);
+  nxCtx.setTransform(nxDpr, 0, 0, nxDpr, 0, 0);
+  nxW = w; nxH = h;
+}
+
+function nxAlpha(z, far) {
+  var near = Math.min(1, Math.max(0, (z - 0.50) / 0.80));
+  var back = Math.max(0, 1 - Math.pow(z / far, 1.5));
+  return near * back;
+}
+
+function nxLoop() {
+  nxRaf = requestAnimationFrame(nxLoop);
+  if (!nxCtx || nxW <= 0 || nxH <= 0) return;
+
+  nxSpd += (nxTar - nxSpd) * 0.055;
+  nxT += nxSpd * 0.021;
+
+  var w = nxW, h = nxH, ctx = nxCtx;
+  var vx = w * 0.5, vy = h * 0.44;
+  ctx.clearRect(0, 0, w, h);
+
+  /* 隧道尽头的霓虹光晕 */
+  var glow = ctx.createRadialGradient(vx, vy, 0, vx, vy, Math.max(w, h) * 0.68);
+  glow.addColorStop(0, 'rgba(56,189,248,.22)');
+  glow.addColorStop(0.42, 'rgba(99,102,241,.11)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
+  /* 透视网格环 */
+  var N = 15, K = 1.32, far = N + 1.5, phase = nxT % 1;
+  var pts = [];
+  for (var i = 0; i <= N; i++) {
+    var z = i + 0.14 + phase;
+    var s = K / z;
+    pts.push({ x: vx - w * 0.5 * s, y: vy - h * 0.5 * s, w: w * s, h: h * s, z: z });
+  }
+  ctx.lineJoin = 'miter';
+  for (var k = 0; k <= N; k++) {
+    var p = pts[k];
+    if (p.z < 0.44) continue;
+    var a = nxAlpha(p.z, far);
+    if (a <= 0.012) continue;
+    var col = (k % 2 === 0) ? '56,189,248' : '129,140,248';
+    ctx.lineWidth = Math.max(0.6, 2.6 / p.z);
+    ctx.strokeStyle = 'rgba(' + col + ',' + (a * 0.85).toFixed(3) + ')';
+    ctx.strokeRect(p.x, p.y, p.w, p.h);
+    var q = pts[k + 1];
+    if (q && q.z > 0.44) {
+      ctx.strokeStyle = 'rgba(' + col + ',' + (a * 0.42).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+      ctx.moveTo(p.x + p.w, p.y); ctx.lineTo(q.x + q.w, q.y);
+      ctx.moveTo(p.x, p.y + p.h); ctx.lineTo(q.x, q.y + q.h);
+      ctx.moveTo(p.x + p.w, p.y + p.h); ctx.lineTo(q.x + q.w, q.y + q.h);
+      ctx.stroke();
+    }
+  }
+
+  /* 掠过的光带 */
+  for (var b = 0; b < 4; b++) {
+    var pb = ((nxT * 0.34 + b * 0.26) % 1);
+    var zb = 0.6 + pb * 8.6;
+    var sb = K / zb;
+    var yy = vy + h * 0.5 * sb * ((b % 2 === 0) ? 0.62 : -0.62);
+    var ab = Math.sin(pb * Math.PI) * 0.55;
+    if (ab <= 0.03) continue;
+    var x0 = vx - w * 0.5 * sb * 0.95, x1 = vx + w * 0.5 * sb * 0.95;
+    var lg = ctx.createLinearGradient(x0, 0, x1, 0);
+    lg.addColorStop(0, 'rgba(56,189,248,0)');
+    lg.addColorStop(0.5, 'rgba(186,230,253,' + ab.toFixed(3) + ')');
+    lg.addColorStop(1, 'rgba(56,189,248,0)');
+    ctx.strokeStyle = lg;
+    ctx.lineWidth = Math.max(1, 7 / zb);
+    ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x1, yy); ctx.stroke();
+  }
+}
+
+/* ---------- 名字显示器 ---------- */
+function nxNameSize(txt) {
+  var vh = window.innerHeight || 720;
+  var w = (nxCv && nxCv.parentElement) ? nxCv.parentElement.clientWidth : 1200;
+  var byH = Math.max(40, Math.min(vh * 0.13, 140));
+  var len = (txt || '').length || 1;
+  var byW = Math.min(w * 0.86, 1120) / (len * 1.08);
+  return Math.round(Math.max(22, Math.min(byH, byW)));
+}
+
+function nxShow(s) {
+  if (!nxNm || !s) return;
+  nxNm.textContent = s.name;
+  if (nxSid) nxSid.textContent = 'NO.' + s.id;
+  nxNm.style.fontSize = nxNameSize(s.name) + 'px';
+}
+
+function nxPoolNow() {
+  var arr = TC.students || [];
+  if (TC.isNoRepeat() && TC.remain && TC.remain.length) return TC.remain;
+  return arr;
+}
+
+/* ---------- 底部候场池 ---------- */
+function nxBuildPool() {
+  if (!nxPool) return;
+  nxPool.innerHTML = '';
+  nxChips = [];
+  nxHot = -1;
+  var list = TC.students || [];
+  var cap = Math.min(list.length, NX_MAX_CHIP);
+  for (var i = 0; i < cap; i++) {
+    var el = document.createElement('div');
+    el.className = 'nx-chip';
+    el.textContent = list[i].name;
+    el.title = list[i].id + ' ' + list[i].name;
+    nxPool.appendChild(el);
+    nxChips.push({ el: el, s: list[i] });
+  }
+  if (list.length > cap) {
+    var more = document.createElement('div');
+    more.className = 'nx-chip dim';
+    more.textContent = '…' + (list.length - cap);
+    nxPool.appendChild(more);
+    nxChips.push({ el: more, s: null });
+  }
+  nxLayoutPool();
+  nxSyncPool();
+}
+
+function nxLayoutPool() {
+  if (!nxPool || !nxChips.length) return;
+  /* ratio 取 0.80：让 autoFitGrid 优先选「少行」，两行即可完整容纳 62 人 */
+  var r = TC.autoFitGrid(nxPool, nxChips.length, {
+    gap: 3, ratio: 0.80, minW: 34, maxW: 130
+  });
+  if (!r) return;
+  var fs = Math.max(8, Math.min(15, Math.round(r.cw / 3.1)));
+  for (var i = 0; i < nxChips.length; i++) nxChips[i].el.style.fontSize = fs + 'px';
+}
+
+function nxSyncPool() {
+  if (nxPoolNum) nxPoolNum.textContent = (TC.remain && TC.remain.length) || 0;
+  var noRep = TC.isNoRepeat(), remain = TC.remain || [];
+  for (var i = 0; i < nxChips.length; i++) {
+    var c = nxChips[i];
+    if (!c.s) continue;
+    var gone = noRep && remain.length > 0 && remain.indexOf(c.s) === -1;
+    c.el.classList.toggle('dim', gone && !c.el.classList.contains('won'));
+  }
+}
+
+function nxFlashPool() {
+  if (!nxChips.length) return;
+  if (nxHot >= 0 && nxChips[nxHot]) nxChips[nxHot].el.classList.remove('hot');
+  nxHot = Math.floor(Math.random() * nxChips.length);
+  if (nxChips[nxHot]) nxChips[nxHot].el.classList.add('hot');
+}
+
+function nxClearHot() {
+  if (nxHot >= 0 && nxChips[nxHot]) nxChips[nxHot].el.classList.remove('hot');
+  nxHot = -1;
+}
+
+function nxMarkWinners(winners) {
+  for (var i = 0; i < nxChips.length; i++) {
+    if (!nxChips[i].s) continue;
+    for (var j = 0; j < winners.length; j++) {
+      if (nxChips[i].s.id === winners[j].id && nxChips[i].s.name === winners[j].name) {
+        nxChips[i].el.classList.add('won');
+        nxChips[i].el.classList.remove('dim');
+      }
+    }
+  }
+}
+
+/* ---------- 摇人 ---------- */
+function nxTick() {
+  var arr = nxPoolNow();
+  if (!arr.length) return;
+  nxShow(TC.pick(arr));
+  var el = Date.now() - nxT0;
+  TC.Music.sfxRoll(Math.min(1, el / 2400));
+  if (nxBar) nxBar.style.width = (((el % 1500) / 15).toFixed(1)) + '%';
+  nxFlashPool();
+}
+
+function nxCancelLock() {
+  if (nxLockTimer) { clearTimeout(nxLockTimer); nxLockTimer = null; }
+  nxLocking = false;
+  nxOpenAfterLock = false;
+}
+
+function nxLock(w) {
+  nxLocking = false;
+  if (nxCore) nxCore.classList.add('locked');
+  if (nxBar) nxBar.style.width = '100%';
+  if (w) {
+    nxShow(w);
+    if (nxCore) {
+      var r = nxCore.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      TC.FX.sparks(cx, cy, 46, '#38bdf8');
+      TC.FX.sparks(cx, cy, 28, '#c7d2fe');
+      TC.FX.ring(cx, cy, '#38bdf8', 0, 3);
+      TC.FX.ring(cx, cy, '#818cf8', 0, 2);
+      TC.FX.flash('#38bdf8', 0.14);
+      TC.FX.shake(1);
+    }
+  }
+  if (nxOpenAfterLock) { nxOpenAfterLock = false; nxOpenReveal(); }
+}
+
+/* ---------- 揭晓 ---------- */
+function nxOpenReveal() {
+  if (!nxReveal) return;
+  nxReveal.classList.add('active');
+  nxLayoutReveal();
+}
+
+function nxLayoutReveal() {
+  if (!nxBox) return;
+  var cards = nxBox.children;
+  if (!cards.length) return;
+  var r = TC.autoFitGrid(nxBox, cards.length, {
+    gap: 12, ratio: 0.60, minW: 150, maxW: 460, maxH: 300
+  });
+  if (!r) return;
+  for (var i = 0; i < cards.length; i++) {
+    var nm = cards[i].querySelector('.nc-nm');
+    var id = cards[i].querySelector('.nc-id');
+    if (!nm) continue;
+    var len = (nm.textContent || '').length || 1;
+    var fs = Math.max(15, Math.min(r.cw * 0.40, (r.cw * 0.90) / len));
+    nm.style.fontSize = fs + 'px';
+    if (id) id.style.fontSize = Math.max(9, Math.round(fs * 0.28)) + 'px';
+  }
+}
+
+function nxRest() {
+  if (nxNm) {
+    nxNm.textContent = '准备就绪';
+    nxNm.style.fontSize = nxNameSize('准备就绪') + 'px';
+  }
+  if (nxSid) nxSid.textContent = 'NO.--';
+}
+
+/* ---------- 生命周期钩子 ---------- */
+function stageInit() {
+  nxResize();
+  nxBuildPool();
+  nxRest();
+  if (!nxRaf) nxRaf = requestAnimationFrame(nxLoop);
+  window.addEventListener('resize', nxResize);
+}
+
+function stageLayout() {
+  nxResize();
+  nxLayoutPool();
+  if (nxReveal && nxReveal.classList.contains('active')) nxLayoutReveal();
+}
+
+function stageStartRoll() {
+  nxCancelLock();
+  nxClearHot();
+  if (nxReveal) nxReveal.classList.remove('active');
+  if (nxCore) nxCore.classList.remove('locked');
+  nxTar = 3.4;
+  nxT0 = Date.now();
+  nxSyncPool();
+  if (nxBar) nxBar.style.width = '0%';
+  if (!nxTimer) nxTimer = setInterval(nxTick, 45);
+  if (!nxSpeedTimer) {
+    nxSpeedTimer = setInterval(function () {
+      if (TC.rolling) TC.FX.speedLines(320, 'rgba(125,211,252,.75)');
+    }, 950);
+  }
+}
+
+function stageStopRoll(winners) {
+  if (nxTimer) { clearInterval(nxTimer); nxTimer = null; }
+  if (nxSpeedTimer) { clearInterval(nxSpeedTimer); nxSpeedTimer = null; }
+  if (nxLockTimer) { clearTimeout(nxLockTimer); nxLockTimer = null; }
+  nxTar = 1.0;
+  nxMarkWinners(winners);
+  nxSyncPool();
+
+  var target = (winners && winners[0]) ? winners[0] : null;
+  nxLocking = true;
+  var seq = [45, 58, 74, 92, 112, 140, 175, 220];
+  var k = 0;
+
+  function step() {
+    nxLockTimer = null;
+    if (k >= seq.length) { nxLock(target); return; }
+    var near = target && k >= seq.length - 2;
+    if (near) nxShow(target);
+    else {
+      var arr = nxPoolNow();
+      if (arr.length) nxShow(TC.pick(arr));
+    }
+    TC.Music.sfxRoll(0.55 + (k / seq.length) * 0.45);
+    if (k === seq.length - 1) TC.Music.sfxFlip();
+    if (k === 0) nxClearHot();
+    var gap = seq[k];
+    k++;
+    nxLockTimer = setTimeout(step, gap);
+  }
+  step();
+}
+
+function revealWinners(winners) {
+  if (!nxBox || !nxReveal) return;
+  nxBox.innerHTML = '';
+  winners.forEach(function (w, i) {
+    var d = document.createElement('div');
+    d.className = 'nx-card';
+    d.style.animationDelay = (i * 0.08) + 's';
+    d.innerHTML = '<div class="nc-id id-tag"></div><div class="nc-nm"></div>';
+    d.querySelector('.nc-id').textContent = 'NO.' + w.id;
+    d.querySelector('.nc-nm').textContent = w.name;
+    nxBox.appendChild(d);
+  });
+  if (nxLocking) nxOpenAfterLock = true;
+  else nxOpenReveal();
+}
+
+function stageClearReveal() {
+  if (nxReveal) nxReveal.classList.remove('active');
+  nxOpenAfterLock = false;
+}
+
+function onResetHook() {
+  if (nxReveal) nxReveal.classList.remove('active');
+  nxCancelLock();
+  if (nxTimer) { clearInterval(nxTimer); nxTimer = null; }
+  if (nxSpeedTimer) { clearInterval(nxSpeedTimer); nxSpeedTimer = null; }
+  nxTar = 1.0;
+  nxClearHot();
+  if (nxCore) nxCore.classList.remove('locked');
+  if (nxBar) nxBar.style.width = '0%';
+  nxRest();
+  nxBuildPool();
+}
+
+function themedPillStyle(el) {
+  el.style.background = 'linear-gradient(135deg, rgba(56,189,248,.22), rgba(99,102,241,.22))';
+  el.style.border = '1px solid rgba(56,189,248,.60)';
+  el.style.color = '#e0f2fe';
+  el.style.boxShadow = '0 0 14px rgba(56,189,248,.45)';
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,2294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>四年级神话大冒险——中国神话与希腊神话闯关奇遇记</title>
+  <style>
+    /* 全局重置与童趣神话风配色系统 */
+    :root {
+      --primary-gold: #FFB800;
+      --gold-glow: #FFE58F;
+      --myth-blue: #1E3A8A;
+      --myth-purple: #4C1D95;
+      --myth-cyan: #06B6D4;
+      --accent-coral: #F43F5E;
+      --accent-green: #10B981;
+      --bg-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4c1d95 75%, #0f172a 100%);
+      --card-bg: rgba(255, 255, 255, 0.94);
+      --card-border: #FCD34D;
+      --text-main: #1F2937;
+      --text-muted: #4B5563;
+      --shadow-magical: 0 16px 40px -8px rgba(253, 224, 71, 0.25), 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    input, textarea {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+      touch-action: manipulation;
+    }
+
+    /* 动态神话星空与飘浮祥云背景 */
+    .sky-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .stars-layer {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 120px 180px, #fef08a, rgba(0,0,0,0)),
+        radial-gradient(3px 3px at 240px 80px, #93c5fd, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 380px 290px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(2.5px 2.5px at 500px 150px, #fde047, rgba(0,0,0,0)),
+        radial-gradient(3px 3px at 700px 350px, #e9d5ff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 900px 120px, #ffffff, rgba(0,0,0,0));
+      background-repeat: repeat;
+      background-size: 600px 400px;
+      opacity: 0.65;
+      animation: twinkle 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      0% { opacity: 0.45; transform: scale(1); }
+      100% { opacity: 0.85; transform: scale(1.02); }
+    }
+
+    .cloud {
+      position: absolute;
+      opacity: 0.28;
+      filter: drop-shadow(0 8px 16px rgba(255, 230, 150, 0.4));
+      animation: floatCloud linear infinite;
+    }
+    .cloud-1 { top: 8%; left: -20%; width: 280px; animation-duration: 48s; }
+    .cloud-2 { top: 45%; left: -30%; width: 340px; animation-duration: 65s; animation-delay: -15s; }
+    .cloud-3 { top: 75%; left: -25%; width: 260px; animation-duration: 52s; animation-delay: -30s; }
+
+    @keyframes floatCloud {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(140vw); }
+    }
+
+    /* 顶部全局浮动工具栏（音效 & 平板帮助） */
+    .global-bar {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      z-index: 100;
+      display: flex;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      color: #FFF;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .icon-btn:active {
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.4);
+    }
+
+    /* 容器基座 */
+    .app-viewport {
+      position: relative;
+      z-index: 10;
+      max-width: 920px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 60px 18px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* 统一神殿卷轴卡片 */
+    .magical-card {
+      background: var(--card-bg);
+      border: 3px solid var(--card-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow-magical);
+      padding: 36px 32px;
+      position: relative;
+      overflow: hidden;
+      animation: cardAppear 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes cardAppear {
+      0% { opacity: 0; transform: translateY(24px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* 四角神殿云雷金纹装饰 */
+    .corner-decor {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 4px solid #D97706;
+      pointer-events: none;
+      opacity: 0.65;
+    }
+    .corner-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; border-radius: 12px 0 0 0; }
+    .corner-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; border-radius: 0 12px 0 0; }
+    .corner-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; border-radius: 0 0 0 12px; }
+    .corner-br { bottom: 10px; right: 10px; border-left: none; border-top: none; border-radius: 0 0 12px 0; }
+
+    /* 标题与副标 */
+    .title-banner {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .badge-pill {
+      display: inline-block;
+      background: linear-gradient(90deg, #F59E0B, #EA580C);
+      color: #FFF;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 5px 16px;
+      border-radius: 20px;
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+    .hero-title {
+      font-size: clamp(26px, 5vw, 36px);
+      font-weight: 900;
+      line-height: 1.25;
+      background: linear-gradient(135deg, #7C2D12 0%, #B45309 30%, #4338CA 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .hero-subtitle {
+      font-size: 15px;
+      color: #64748B;
+      font-weight: 500;
+    }
+
+    /* 欢迎封面插画元素 */
+    .welcome-hero {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 20px 0 28px;
+      position: relative;
+    }
+    .hero-avatar-box {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .avatar-bubble {
+      width: 95px;
+      height: 95px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+      border: 3px solid #F59E0B;
+      box-shadow: 0 10px 20px rgba(245, 158, 11, 0.25);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: hoverAvatar 3s ease-in-out infinite alternate;
+    }
+    .avatar-bubble:nth-child(2) {
+      animation-delay: -1.5s;
+      background: linear-gradient(135deg, #E0E7FF, #C7D2FE);
+      border-color: #6366F1;
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.25);
+    }
+    .avatar-bubble svg { width: 50px; height: 50px; }
+    .avatar-label { font-size: 11px; font-weight: 700; color: #78350F; margin-top: 2px; }
+    .avatar-bubble:nth-child(2) .avatar-label { color: #3730A3; }
+
+    @keyframes hoverAvatar {
+      0% { transform: translateY(0px) rotate(-3deg); }
+      100% { transform: translateY(-10px) rotate(4deg); }
+    }
+
+    .vs-tag {
+      font-size: 20px;
+      font-weight: 900;
+      color: #EF4444;
+      background: #FFF;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 3px solid #FECACA;
+      box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+    }
+
+    /* 表单输入模块 */
+    .form-section {
+      background: #FFFBEB;
+      border: 2px dashed #FCD34D;
+      border-radius: 20px;
+      padding: 22px 20px;
+      margin-bottom: 24px;
+    }
+    .form-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #92400E;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .magical-card { padding: 24px 16px; }
+      .app-viewport { padding: 50px 12px 30px; }
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field-group label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #78350F;
+    }
+    .field-group input, .field-group select {
+      background: #FFFFFF;
+      border: 2px solid #FDE68A;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
+      color: #1F2937;
+      outline: none;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .field-group input:focus, .field-group select:focus {
+      border-color: #F59E0B;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+    }
+
+    /* 规则展示卷轴 */
+    .rules-scroll {
+      background: #EFF6FF;
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 26px;
+      border-left: 5px solid #3B82F6;
+    }
+    .rules-head {
+      font-size: 15px;
+      font-weight: 800;
+      color: #1E40AF;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rules-list {
+      list-style: none;
+      font-size: 13.5px;
+      color: #334155;
+      line-height: 1.65;
+    }
+    .rules-list li {
+      margin-bottom: 6px;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .rules-list li span.dot {
+      color: #3B82F6;
+      font-weight: bold;
+    }
+
+    /* 华丽主按钮 */
+    .btn-magic {
+      width: 100%;
+      background: linear-gradient(135deg, #F59E0B 0%, #EA580C 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 18px;
+      padding: 16px 24px;
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 12px 24px -4px rgba(234, 88, 12, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-magic:active {
+      transform: scale(0.96);
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+    }
+    .btn-secondary {
+      background: #F1F5F9;
+      color: #475569;
+      box-shadow: none;
+      border: 2px solid #CBD5E1;
+    }
+    .btn-secondary:active { background: #E2E8F0; }
+
+    /* 答题界面：顶部状态条 */
+    .quiz-hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #F8FAFC;
+      border-radius: 16px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      border: 1px solid #E2E8F0;
+    }
+    .hud-hero-info {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hud-progress-info {
+      font-size: 14px;
+      font-weight: 800;
+      color: #D97706;
+      background: #FEF3C7;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    /* 进度条轨道 */
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #E2E8F0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10B981, #06B6D4);
+      width: 5%;
+      border-radius: 999px;
+      transition: width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 题卡内容 */
+    .question-box {
+      margin-bottom: 22px;
+    }
+    .q-type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .badge-china {
+      background: #FEE2E2;
+      color: #B91C1C;
+      border: 1px solid #FECACA;
+    }
+    .badge-greece {
+      background: #E0E7FF;
+      color: #3730A3;
+      border: 1px solid #C7D2FE;
+    }
+
+    .q-content {
+      font-size: clamp(17px, 2.5vw, 20px);
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.5;
+    }
+
+    /* 选项组（平板超大触摸感） */
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .option-btn {
+      background: #FFFFFF;
+      border: 2.5px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1E293B;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    }
+    .option-btn:hover {
+      border-color: #94A3B8;
+      background: #F8FAFC;
+    }
+    .option-btn:active {
+      transform: scale(0.98);
+    }
+    .option-tag {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: #F1F5F9;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    /* 答对/答错样式 */
+    .option-btn.correct {
+      background: #ECFDF5 !important;
+      border-color: #10B981 !important;
+      color: #065F46 !important;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    .option-btn.correct .option-tag {
+      background: #10B981;
+      color: #FFFFFF;
+    }
+    .option-btn.wrong {
+      background: #FEF2F2 !important;
+      border-color: #EF4444 !important;
+      color: #991B1B !important;
+      animation: shake 0.35s;
+    }
+    .option-btn.wrong .option-tag {
+      background: #EF4444;
+      color: #FFFFFF;
+    }
+    .option-btn.disabled {
+      pointer-events: none;
+      opacity: 0.85;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    /* 趣味神话秘闻即时解析框 */
+    .explanation-box {
+      background: #FFFBEB;
+      border: 1.5px solid #FCD34D;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #78350F;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      animation: fadeIn 0.3s ease-out;
+      display: none;
+    }
+    .explanation-box strong {
+      color: #B45309;
+      display: block;
+      margin-bottom: 4px;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 压轴题专属板块 */
+    .essay-card {
+      background: #FAF5FF;
+      border: 2px solid #D8B4FE;
+      border-radius: 20px;
+      padding: 22px;
+      margin-bottom: 22px;
+    }
+    .essay-hero-tips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 16px;
+    }
+    .hero-chip {
+      background: #FFFFFF;
+      border: 1.5px solid #E9D5FF;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #6B21A8;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .hero-chip:active, .hero-chip.active {
+      background: #7E22CE;
+      color: #FFF;
+      border-color: #7E22CE;
+      transform: scale(0.95);
+    }
+
+    /* 表达提示脚手架 */
+    .scaffold-box {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #64748B;
+      margin-bottom: 14px;
+      border-left: 3px solid #A855F7;
+    }
+
+    .essay-textarea {
+      width: 100%;
+      height: 140px;
+      background: #FFFFFF;
+      border: 2px solid #E9D5FF;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: #1E293B;
+      outline: none;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .essay-textarea:focus {
+      border-color: #9333EA;
+      box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.15);
+    }
+
+    /* 模拟口语演说录音条 */
+    .voice-recorder-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #FFFFFF;
+      border: 1.5px dashed #A855F7;
+      border-radius: 14px;
+      padding: 10px 16px;
+      margin-top: 12px;
+    }
+    .record-btn {
+      background: #EF4444;
+      color: #FFF;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .sound-waves {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 20px;
+    }
+    .wave-bar {
+      width: 3px;
+      height: 6px;
+      background: #CBD5E1;
+      border-radius: 2px;
+    }
+    .recording .wave-bar {
+      background: #EF4444;
+      animation: wave 0.8s ease-in-out infinite alternate;
+    }
+    .recording .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+    .recording .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+    .recording .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+    .recording .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+    @keyframes wave {
+      0% { height: 4px; }
+      100% { height: 18px; }
+    }
+
+    /* 结果页（封神大榜） */
+    .result-score-circle {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+      border: 5px solid #F59E0B;
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.4);
+      margin: 0 auto 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-number {
+      font-size: 46px;
+      font-weight: 900;
+      color: #B45309;
+      line-height: 1;
+    }
+    .score-unit {
+      font-size: 13px;
+      font-weight: 700;
+      color: #92400E;
+    }
+    .title-rank {
+      font-size: 22px;
+      font-weight: 900;
+      color: #7C2D12;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .rank-desc {
+      text-align: center;
+      font-size: 14px;
+      color: #64748B;
+      margin-bottom: 24px;
+    }
+
+    /* 战报概览网格 */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    .stat-pill {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 14px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .stat-label { font-size: 11px; color: #64748B; font-weight: 600; }
+    .stat-val { font-size: 17px; font-weight: 800; color: #0F172A; margin-top: 4px; }
+
+    /* 错题回顾手风琴 */
+    .review-section {
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .review-toggle-btn {
+      width: 100%;
+      background: none;
+      border: none;
+      font-size: 14px;
+      font-weight: 800;
+      color: #2563EB;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .review-list {
+      margin-top: 14px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .review-item {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 12px 14px;
+      border-left: 4px solid #CBD5E1;
+      font-size: 13px;
+    }
+    .review-item.is-wrong { border-left-color: #EF4444; }
+    .review-item.is-right { border-left-color: #10B981; }
+
+    /* 弹窗遮罩层（平板使用指导） */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-content {
+      background: #FFFFFF;
+      border-radius: 24px;
+      max-width: 520px;
+      width: 100%;
+      padding: 26px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+      animation: cardAppear 0.3s ease;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .help-step {
+      margin-bottom: 12px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13.5px;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .help-step strong { color: #2563EB; }
+
+    /* Canvas 庆祝撒花 */
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 150;
+    }
+
+    /* 海报预览弹窗 */
+    #posterModal .modal-content {
+      max-width: 600px;
+      text-align: center;
+    }
+    #posterImg {
+      max-width: 100%;
+      height: auto;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+      margin: 12px 0 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 动态神话星空与云层背景 -->
+  <div class="sky-bg">
+    <div class="stars-layer"></div>
+    <!-- 东方祥云 SVG 浮动 -->
+    <svg class="cloud cloud-1" viewBox="0 0 120 60" fill="#FFE58F">
+      <path d="M20,45 Q5,45 5,30 Q5,15 20,15 Q25,5 40,5 Q55,5 60,15 Q75,10 85,22 Q95,20 100,32 Q115,35 110,48 Q100,55 80,52 Q60,58 40,52 Z" />
+    </svg>
+    <svg class="cloud cloud-2" viewBox="0 0 140 70" fill="#E9D5FF">
+      <path d="M25,50 Q10,50 10,35 Q10,20 25,20 Q30,8 50,8 Q70,8 75,20 Q90,12 105,25 Q120,22 125,38 Q140,42 130,55 Q115,65 95,60 Q70,68 45,60 Z" />
+    </svg>
+    <svg class="cloud cloud-3" viewBox="0 0 110 55" fill="#BFDBFE">
+      <path d="M15,40 Q5,40 5,28 Q5,15 18,15 Q22,6 36,6 Q50,6 55,15 Q68,10 78,20 Q88,18 92,28 Q105,30 100,42 Q90,48 72,46 Q55,50 35,46 Z" />
+    </svg>
+  </div>
+
+  <!-- 全局右上角快捷工具条 -->
+  <div class="global-bar">
+    <button class="icon-btn" id="soundToggleBtn" onclick="toggleSound()">
+      <span id="soundIcon">🔊</span>
+      <span id="soundLabel">音效: 开</span>
+    </button>
+    <button class="icon-btn" onclick="openHelpModal()">
+      <span>📱</span>
+      <span>平板指南</span>
+    </button>
+  </div>
+
+  <!-- 庆祝撒花画布 -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <!-- 主交互容器 -->
+  <div class="app-viewport">
+    
+    <!-- ================= 阶段 1：欢迎扉页 & 勇士登记 ================= -->
+    <div id="pageWelcome" class="magical-card">
+      <div class="corner-decor corner-tl"></div>
+      <div class="corner-decor corner-tr"></div>
+      <div class="corner-decor corner-bl"></div>
+      <div class="corner-decor corner-br"></div>
+
+      <div class="title-banner">
+        <div class="badge-pill">⭐ 四年级语文·神话单元拓展闯关 ⭐</div>
+        <h1 class="hero-title">神话探秘大奇遇</h1>
+        <p class="hero-subtitle">《中国古代神话》×《希腊神话故事》终极试炼</p>
+      </div>
+
+      <!-- 萌趣英雄对决插画 -->
+      <div class="welcome-hero">
+        <div class="hero-avatar-box">
+          <!-- 东方仙童与盘古神斧 -->
+          <div class="avatar-bubble">
+            <svg viewBox="0 0 64 64" fill="none">
+              <circle cx="32" cy="32" r="30" fill="#FEF3C7"/>
+              <path d="M22 28C22 22 42 22 42 28C42 34 38 42 32 42C26 42 22 34 22 28Z" fill="#F59E0B"/>
+              <path d="M16 20C16 16 26 12 32 12C38 12 48 16 48 20" stroke="#B45309" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="28" cy="27" r="2.5" fill="#78350F"/>
+              <circle cx="36" cy="27" r="2.5" fill="#78350F"/>
+              <path d="M29 34Q32 37 35 34" stroke="#78350F" stroke-width="2" stroke-linecap="round"/>
+              <!-- 金色小发髻 -->
+              <circle cx="32" cy="11" r="5" fill="#F59E0B" stroke="#B45309" stroke-width="2"/>
+            </svg>
+            <span class="avatar-label">东方小仙童</span>
+          </div>
+
+          <div class="vs-tag">VS</div>
+
+          <!-- 希腊智慧神童与橄榄枝冠 -->
+          <div class="avatar-bubble">
+            <svg viewBox="0 0 64 64" fill="none">
+              <circle cx="32" cy="32" r="30" fill="#E0E7FF"/>
+              <path d="M20 20L32 10L44 20V26H20V20Z" fill="#818CF8"/>
+              <circle cx="32" cy="34" r="14" fill="#C7D2FE"/>
+              <circle cx="28" cy="32" r="2.5" fill="#312E81"/>
+              <circle cx="36" cy="32" r="2.5" fill="#312E81"/>
+              <path d="M29 39Q32 42 35 39" stroke="#312E81" stroke-width="2" stroke-linecap="round"/>
+              <!-- 桂冠 -->
+              <path d="M18 28Q22 36 24 38M46 28Q42 36 40 38" stroke="#10B981" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span class="avatar-label">希腊小哲人</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 勇士登记板块 -->
+      <div class="form-section">
+        <div class="form-title">
+          <span>📜</span>
+          <span>第一步：登记神殿勇士名册</span>
+        </div>
+        <div class="form-grid">
+          <div class="field-group">
+            <label for="studentClass">所在班级：</label>
+            <select id="studentClass">
+              <option value="四年级2301班">四年级 2301 班</option>
+              <option value="四年级2302班">四年级 2302 班</option>
+              <option value="四年级2303班">四年级 2303 班</option>
+              <option value="四年级2304班">四年级 2304 班</option>
+              <option value="四年级2305班">四年级 2305 班</option>
+              <option value="四年级2306班">四年级 2306 班</option>
+              <option value="四年级2307班">四年级 2307 班</option>
+              <option value="四年级2308班">四年级 2308 班</option>
+              <option value="四年级2309班">四年级 2309 班</option>
+              <option value="四年级2310班">四年级 2310 班</option>
+              <option value="四年级2311班">四年级 2311 班</option>
+              <option value="四年级2312班">四年级 2312 班</option>
+              <option value="四年级2313班">四年级 2313 班</option>
+              <option value="四年级2314班">四年级 2314 班</option>
+              <option value="四年级2315班">四年级 2315 班</option>
+              <option value="四年级2316班">四年级 2316 班</option>
+              <option value="四年级2317班">四年级 2317 班</option>
+              <option value="四年级2318班">四年级 2318 班</option>
+              <option value="四年级2319班">四年级 2319 班</option>
+              <option value="四年级2320班">四年级 2320 班</option>
+              <option value="四年级2321班">四年级 2321 班</option>
+              <option value="四年级2322班">四年级 2322 班</option>
+              <option value="四年级2323班">四年级 2323 班</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="studentId">学生学号：</label>
+            <input type="number" id="studentId" placeholder="例如：18号" inputmode="numeric">
+          </div>
+          <div class="field-group">
+            <label for="studentName">勇士姓名：</label>
+            <input type="text" id="studentName" placeholder="写下你的大名">
+          </div>
+        </div>
+      </div>
+
+      <!-- 规则解读卷轴 -->
+      <div class="rules-scroll">
+        <div class="rules-head">
+          <span>⚔️</span>
+          <span>神话试炼规则密函</span>
+        </div>
+        <ul class="rules-list">
+          <li><span class="dot">●</span> <strong>随机召唤：</strong>系统从 40 道精选神话题库中，为你专属随机抽取 20 道客观挑战题。</li>
+          <li><span class="dot">●</span> <strong>神祇积分：</strong>每题 5 分，满分 100 分。答题后立即揭晓神话秘闻小百科！</li>
+          <li><span class="dot">●</span> <strong>压轴表达：</strong>回答终极口语演说题《我最喜欢的神话人物》，获得神王授勋徽章。</li>
+          <li><span class="dot">●</span> <strong>平板畅玩：</strong>支持手指点选、直接离线运行，答完还可一键保存“神级荣誉奖状”发给老师！</li>
+        </ul>
+      </div>
+
+      <!-- 开启闯关按钮 -->
+      <button class="btn-magic" onclick="startAdventure()">
+        <span>🌟</span>
+        <span>我准备好了，开启神话试炼！</span>
+      </button>
+    </div>
+
+    <!-- ================= 阶段 2：20题客观题闯关 ================= -->
+    <div id="pageQuiz" class="magical-card" style="display:none;">
+      <div class="corner-decor corner-tl"></div>
+      <div class="corner-decor corner-tr"></div>
+      <div class="corner-decor corner-bl"></div>
+      <div class="corner-decor corner-br"></div>
+
+      <!-- 顶栏状态 -->
+      <div class="quiz-hud">
+        <div class="hud-hero-info">
+          <span>🛡️ 勇士:</span>
+          <span id="hudName" style="color:#B45309;">小勇士</span>
+        </div>
+        <div class="hud-progress-info">
+          <span>第 <span id="currentQIndexText">1</span> / 20 关</span>
+        </div>
+        <div class="hud-hero-info">
+          <span>⭐ 当前积分:</span>
+          <span id="hudScoreText" style="color:#10B981; font-weight:800;">0 分</span>
+        </div>
+      </div>
+
+      <!-- 进度条 -->
+      <div class="progress-track">
+        <div class="progress-fill" id="quizProgressBar"></div>
+      </div>
+
+      <!-- 题目卡片 -->
+      <div class="question-box">
+        <div id="qTypeBadge" class="q-type-badge badge-china">
+          <span id="qTypeIcon">🐉</span>
+          <span id="qTypeText">【中国神话】</span>
+        </div>
+        <h2 class="q-content" id="questionTitle">加载题目中...</h2>
+      </div>
+
+      <!-- 选项按钮组 -->
+      <div class="options-grid" id="optionsContainer">
+        <!-- JS 动态渲染选项 -->
+      </div>
+
+      <!-- 趣味即时解析气泡 -->
+      <div class="explanation-box" id="explanationBox">
+        <strong id="expTitle">💡 神话小秘闻：</strong>
+        <p id="expContent">解析文本...</p>
+      </div>
+
+      <!-- 下一题操作按钮 -->
+      <button class="btn-magic" id="nextBtn" style="display:none;" onclick="handleNextQuestion()">
+        <span id="nextBtnText">进入下一关 ➔</span>
+      </button>
+    </div>
+
+    <!-- ================= 阶段 3：口语压轴题 ================= -->
+    <div id="pageEssay" class="magical-card" style="display:none;">
+      <div class="corner-decor corner-tl"></div>
+      <div class="corner-decor corner-tr"></div>
+      <div class="corner-decor corner-bl"></div>
+      <div class="corner-decor corner-br"></div>
+
+      <div class="title-banner">
+        <div class="badge-pill" style="background:linear-gradient(90deg, #9333EA, #4F46E5);">🔥 终极压轴演说试炼 🔥</div>
+        <h2 class="hero-title" style="font-size:26px;">神话英雄演说台</h2>
+        <p class="hero-subtitle">客观题试炼完毕！现在，展示你卓越的思辨与口才吧！</p>
+      </div>
+
+      <div class="essay-card">
+        <div style="font-size:16px; font-weight:800; color:#4C1D95; margin-bottom:6px;">
+          🎤 压轴演说题目：
+        </div>
+        <p style="font-size:15px; color:#1F2937; line-height:1.6; font-weight:600;">
+          你读过了许多中国古代神话和希腊神话故事。在这么多的神仙与英雄中，<strong>你最喜欢哪一个人物？为什么？</strong>请结合具体故事谈谈你的理由。
+        </p>
+
+        <!-- 英雄快捷点赞灵感卡片 -->
+        <div style="font-size:12.5px; color:#6B21A8; font-weight:700; margin-top:14px;">
+          💡 点击快捷选择你崇拜的英雄：
+        </div>
+        <div class="essay-hero-tips" id="heroChipsContainer">
+          <span class="hero-chip" onclick="selectHeroChip(this, '盘古')">🪓 开天辟地的盘古</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '普罗米修斯')">🔥 坚毅无私的普罗米修斯</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '精卫')">🌊 执着坚韧的精卫</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '雅典娜')">🦉 聪慧正义的雅典娜</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '女娲')">✨ 慈爱勇敢的女娲</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '赫拉克勒斯')">🦁 勇往直前的大力神</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '大禹')">🏔️ 三过家门不入的大禹</span>
+          <span class="hero-chip" onclick="selectHeroChip(this, '后羿')">🏹 拯救苍生的后羿</span>
+        </div>
+
+        <!-- 表达脚手架 -->
+        <div class="scaffold-box">
+          ✨ <strong>四步表达法小锦囊：</strong><br>
+          1. 亮出心意：我最喜欢的神话人物是……<br>
+          2. 人物品质：因为他/她具有……的崇高精神<br>
+          3. 故事印证：在故事中，他/她曾经……<br>
+          4. 启示感悟：这个故事让我懂得在学习生活中也要……
+        </div>
+
+        <!-- 演说词输入区 -->
+        <textarea id="essayInput" class="essay-textarea" placeholder="请写下你的演说词（不少于30字）...例如：我最喜欢普罗米修斯，因为他不畏强权，为了人类的光明勇敢盗取火种，这种舍己为人的精神深深打动了我..."></textarea>
+
+        <!-- 模拟口语录音与朗诵条 -->
+        <div class="voice-recorder-bar" id="voiceBar">
+          <button class="record-btn" id="recordBtn" onclick="toggleVoiceRecord()">
+            <span id="recordIcon">🎙️</span>
+            <span id="recordLabel">开始口语录音演说</span>
+          </button>
+          <div style="font-size:12px; color:#64748B;" id="voiceStatus">
+            点击录音并大声朗读你的观点吧！
+          </div>
+          <div class="sound-waves" id="soundWaveBox">
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 提交按钮 -->
+      <button class="btn-magic" onclick="submitFinalEssay()">
+        <span>🏆</span>
+        <span>敲响胜利战鼓，生成封神荣誉榜！</span>
+      </button>
+    </div>
+
+    <!-- ================= 阶段 4：封神胜典（结果与报告卡） ================= -->
+    <div id="pageResult" class="magical-card" style="display:none;">
+      <div class="corner-decor corner-tl"></div>
+      <div class="corner-decor corner-tr"></div>
+      <div class="corner-decor corner-bl"></div>
+      <div class="corner-decor corner-br"></div>
+
+      <div class="title-banner">
+        <div class="badge-pill">🎉 试炼大圆满·神界加冕 🎉</div>
+        <div class="result-score-circle">
+          <div class="score-number" id="finalScoreVal">100</div>
+          <div class="score-unit">分 (满分100)</div>
+        </div>
+        <h2 class="title-rank" id="finalRankTitle">【创世神话大宗师】</h2>
+        <p class="rank-desc" id="finalRankDesc">恭喜你！学贯中西神话，智慧与勇气并存！</p>
+      </div>
+
+      <!-- 核心数据看板 -->
+      <div class="summary-grid">
+        <div class="stat-pill">
+          <div class="stat-label">答对题数</div>
+          <div class="stat-val" style="color:#10B981;" id="statCorrectCount">20 / 20</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">客观题用时</div>
+          <div class="stat-val" style="color:#3B82F6;" id="statDuration">3分15秒</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">压轴口语完成度</div>
+          <div class="stat-val" style="color:#9333EA;">卓越勋章 ⭐</div>
+        </div>
+      </div>
+
+      <!-- 口语演说摘录卡 -->
+      <div style="background:#FAF5FF; border:1px solid #E9D5FF; border-radius:16px; padding:14px; margin-bottom:20px;">
+        <div style="font-size:13px; font-weight:800; color:#6B21A8; margin-bottom:6px; display:flex; justify-content:space-between;">
+          <span>📝 你的神话英雄演说发言：</span>
+          <span id="resultHeroTag" style="color:#9333EA;">[普罗米修斯]</span>
+        </div>
+        <p id="resultEssayQuote" style="font-size:13.5px; color:#334155; line-height:1.6; font-style:italic;">
+          “发言内容...”
+        </p>
+      </div>
+
+      <!-- 错题本抽屉 -->
+      <div class="review-section">
+        <button class="review-toggle-btn" onclick="toggleReviewDrawer()">
+          <span>📖 查看 20 道题全部答题记录与神话解析</span>
+          <span id="reviewArrow">▼</span>
+        </button>
+        <div class="review-list" id="reviewItemsContainer">
+          <!-- 动态注入错题与解析 -->
+        </div>
+      </div>
+
+      <!-- 操作按钮网格 -->
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button class="btn-magic" onclick="generateAwardPoster()">
+          <span>📸</span>
+          <span>生成专属荣誉奖状（保存发给老师/家长群）</span>
+        </button>
+        <button class="btn-magic btn-secondary" onclick="restartAdventure()">
+          <span>🔄</span>
+          <span>重新随机抽题，再战一次</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 弹窗 1：平板使用与离线使用指南 -->
+  <div class="modal-backdrop" id="helpModal" onclick="closeModalOnBackdrop(event, 'helpModal')">
+    <div class="modal-content">
+      <div class="modal-title">
+        <span>📱</span>
+        <span>平板与分享使用指南</span>
+      </div>
+      <div class="help-step">
+        <strong>1. 双击直接打开：</strong><br>
+        这个网页完全是单文件纯净制作，<strong>无需网络、无广告插件</strong>。在电脑或平板中下载后，双击即可使用自带浏览器秒开。
+      </div>
+      <div class="help-step">
+        <strong>2. 平板端微信/QQ打开技巧：</strong><br>
+        如果老师将文件通过微信或QQ发送给学生，平板点击后若显示乱码或不支持直接运行，只需点击右上角三个点 <strong>「···」</strong>，选择 <strong>「在默认浏览器中打开」（Safari / Chrome）</strong> 即可畅快体验！
+      </div>
+      <div class="help-step">
+        <strong>3. 音效与声音说明：</strong><br>
+        页面采用原生网页音频引擎，若平板处于静音模式请调高媒体音量，点击右上角「音效」按钮可自由静音或开启动听音效。
+      </div>
+      <div class="help-step">
+        <strong>4. 成果打卡：</strong><br>
+        闯关结束后点击“生成专属荣誉奖状”，平板长按图片即可保存到相册分享给班级群！
+      </div>
+      <button class="btn-magic" style="margin-top:16px; padding:12px;" onclick="closeHelpModal()">
+        <span>我知道啦，开始闯关</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 弹窗 2：海报生成展示与长按保存 -->
+  <div class="modal-backdrop" id="posterModal" onclick="closeModalOnBackdrop(event, 'posterModal')">
+    <div class="modal-content">
+      <div class="modal-title">
+        <span>🎖️</span>
+        <span>神话荣誉战报已生成！</span>
+      </div>
+      <p style="font-size:13px; color:#64748B;">平板用户可 <strong>长按图片</strong> 保存到相册，电脑用户可右键或点击下方按钮下载：</p>
+      <img id="posterImg" alt="神话闯关荣誉证书">
+      <div style="display:flex; gap:10px;">
+        <a id="downloadPosterLink" class="btn-magic" style="text-decoration:none; padding:12px; font-size:15px; flex:1;" download="神话闯关荣誉战报.png">
+          <span>💾 下载奖状</span>
+        </a>
+        <button class="btn-magic btn-secondary" style="padding:12px; font-size:15px; flex:1;" onclick="closePosterModal()">
+          <span>关闭</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       40 道高质量四年级神话题库（20道中国神话 + 20道希腊神话）
+       ========================================================== */
+    const FULL_QUESTION_BANK = [
+      // ---------- 中国古代神话 (20题) ----------
+      {
+        id: 1,
+        type: 'china',
+        title: '在《盘古开天地》中，盘古倒下后，他呼出的气息变成了什么？',
+        options: ['四季的风和飘动的云', '奔流不息的江河', '普照大地的太阳', '轰隆隆的雷霆'],
+        correctIndex: 0,
+        explanation: '《盘古开天地》中写道：盘古呼出的气息变成了四季的风和飘动的云，发出的声音化作了隆隆的雷声！'
+      },
+      {
+        id: 2,
+        type: 'china',
+        title: '《女娲补天》中，女娲为了拯救陷于水火的人类，炼化了什么宝物来填补苍天？',
+        options: ['九天玄铁', '五彩神石', '深海灵珠', '七彩琉璃'],
+        correctIndex: 1,
+        explanation: '女娲先去大河里挑选许多五彩石，用神火熔炼成熔浆，把天上的大窟窿给补好了！'
+      },
+      {
+        id: 3,
+        type: 'china',
+        title: '在《精卫填海》的神话中，精卫鸟原本是炎帝的小女儿，她的名字叫什么？',
+        options: ['螺祖', '女娃', '羲和', '嫦娥'],
+        correctIndex: 1,
+        explanation: '《山海经》记载：“炎帝之少女，名曰女娃。女娃游于东海，溺而不返，故为精卫。”'
+      },
+      {
+        id: 4,
+        type: 'china',
+        title: '《夸父逐日》里，夸父在口渴力竭倒下前，将手中的木杖扔出，化作了什么？',
+        options: ['一片郁郁葱葱的桃林', '一条清澈甘甜的小溪', '一座巍峨高耸的山峰', '一片美丽的向日葵花海'],
+        correctIndex: 0,
+        explanation: '夸父临死前把拐杖弃掷，拐杖化作了一大片鲜美繁茂的“邓林”（桃林），为后来的行路人遮荫解渴！'
+      },
+      {
+        id: 5,
+        type: 'china',
+        title: '古代神话中天上原本有几个太阳肆虐大地，神射手后羿一口气射下了几个？',
+        options: ['原本8个，射下7个', '原本10个，射下9个', '原本12个，射下11个', '原本9个，射下8个'],
+        correctIndex: 1,
+        explanation: '天上有十个太阳同时出现，烤焦了庄稼。后羿拉开神弓，接连射落了九个太阳，只留下一个为大地提供光和热。'
+      },
+      {
+        id: 6,
+        type: 'china',
+        title: '《嫦娥奔月》中，嫦娥服下的长生不老仙药，是后羿从哪位神仙那里求得的？',
+        options: ['女娲娘娘', '太上老君', '西王母', '太白金星'],
+        correctIndex: 2,
+        explanation: '后羿历经千难万险登上昆仑山，向西王母求得了长生不老的神药，珍藏在百宝匣中。'
+      },
+      {
+        id: 7,
+        type: 'china',
+        title: '在《大禹治水》中，大禹吸取了父亲治水失败的教训，主要采用了什么科学方法平息了水患？',
+        options: ['用泥土围堵水流', '疏通河道，顺势导水入海', '祈求天神下雨停止', '用法力冻结洪水'],
+        correctIndex: 1,
+        explanation: '大禹改变了父亲“堵塞”的错误做法，带领百姓开山劈石、“疏导”水道，让洪水顺畅流入大海。'
+      },
+      {
+        id: 8,
+        type: 'china',
+        title: '相传古代黄帝的史官仓颉，是通过观察什么事物的规律受到启发，创造出古老汉字的？',
+        options: ['星辰与山川', '鸟兽留在雪地与泥土上的足迹', '水里的鱼鳞纹理', '燃烧火焰的形状'],
+        correctIndex: 1,
+        explanation: '仓颉观察鸟兽在雪地上留下的爪印足迹，发现各种脚印形态各异，从而创造出了指代事物的汉字图画！'
+      },
+      {
+        id: 9,
+        type: 'china',
+        title: '神农氏为了给人们辨别百草的药性和毒性，相传他拥有一具怎样神奇的身体？',
+        options: ['刀枪不入的金刚身', '晶莹剔透的水晶肚', '能隐形的仙躯', '长着三双眼睛'],
+        correctIndex: 1,
+        explanation: '传说神农氏有“水晶肚”，内脏器官清晰可见，每吃下一株草药，就能看到药草在肚子里怎样流转变化。'
+      },
+      {
+        id: 10,
+        type: 'china',
+        title: '水神共工因与火神祝融争斗失败，一怒之下撞倒了哪座支撑苍天的大山？',
+        options: ['昆仑山', '泰山', '不周山', '花果山'],
+        correctIndex: 2,
+        explanation: '共工怒触“不周山”，撞断了天柱，导致天向西北倾斜，日月星辰都向西边汇聚！'
+      },
+      {
+        id: 11,
+        type: 'china',
+        title: '在寓言神话《愚公移山》中，愚公下定决心带领子孙后代移走的阻碍交通的两座大山是？',
+        options: ['太行山和王屋山', '华山和嵩山', '衡山和恒山', '终南山和峨眉山'],
+        correctIndex: 0,
+        explanation: '愚公面对“太行、王屋二山，方七百里，高万仞”，立下了“子子孙孙无穷匮也，而山不加增”的坚韧誓言！'
+      },
+      {
+        id: 12,
+        type: 'china',
+        title: '在《哪吒闹海》的精彩传说中，哪吒降生时自带的神兵法宝不包括以下哪一个？',
+        options: ['混天绫', '乾坤圈', '芭蕉扇', '风火轮'],
+        correctIndex: 2,
+        explanation: '哪吒的法宝有乾坤圈、混天绫、风火轮、火尖枪等；而芭蕉扇是《西游记》中铁扇公主或太上老君的宝物。'
+      },
+      {
+        id: 13,
+        type: 'china',
+        title: '《山海经》中“刑天舞干戚，猛志固常在”，刑天在被黄帝斩去头颅后，以什么当做眼睛？',
+        options: ['以双掌为眼睛', '以双乳为眼睛，以肚脐为嘴巴', '借天上的星宿为眼', '借双耳辨别方向'],
+        correctIndex: 1,
+        explanation: '战神刑天断头后依然战斗不息，“以乳为目，以脐为口，操干戚以舞”，象征着永不妥协的英雄气概！'
+      },
+      {
+        id: 14,
+        type: 'china',
+        title: '《宝莲灯》故事中，沉香历经磨难拜师学艺，最终用什么神兵劈开华山救出了母亲？',
+        options: ['开天神斧', '轩辕宝剑', '金箍棒', '倚天剑'],
+        correctIndex: 0,
+        explanation: '小沉香凭借惊人的毅力练成高强武艺，手持萱花开天神斧，一斧劈开华山，救出了慈爱的母亲三圣母！'
+      },
+      {
+        id: 15,
+        type: 'china',
+        title: '上古神话中，哪位圣人观察鸟儿啄击树木冒出火花，从而发明了“钻木取火”？',
+        options: ['有巢氏', '燧人氏', '伏羲氏', '神农氏'],
+        correctIndex: 1,
+        explanation: '燧人氏发明了钻木取火，为人类带来了第一束文明之火，让人类告别了吃生肉的野蛮时代。'
+      },
+      {
+        id: 16,
+        type: 'china',
+        title: '中国古代神话中，每天驾驶着由六条飞龙拉着的日车、巡游天宇的“太阳之母”是谁？',
+        options: ['望舒', '羲和', '嫦娥', '九天玄女'],
+        correctIndex: 1,
+        explanation: '神话中羲和是太阳的母亲，她每天赶着龙车载着太阳儿子巡行天空，望舒则是为月亮驾车的女神。'
+      },
+      {
+        id: 17,
+        type: 'china',
+        title: '相传古蜀国的君王望帝关爱百姓，死后化作什么鸟，每年春耕时不停鸣叫催促农耕？',
+        options: ['青鸟', '精卫', '杜鹃鸟（布谷鸟）', '凤凰'],
+        correctIndex: 2,
+        explanation: '“庄生晓梦迷蝴蝶，望帝春心托杜鹃。”望帝化作杜鹃鸟，春耕时啼叫“不如归去”，催促百姓抓紧农时。'
+      },
+      {
+        id: 18,
+        type: 'china',
+        title: '精卫鸟为了填平夺走她生命的浩瀚东海，每天坚韧不拔地衔来什么东西？',
+        options: ['西山的树枝和石块', '天上的云朵', '沙漠中的细沙', '金银珠宝'],
+        correctIndex: 0,
+        explanation: '精卫“常衔西山之木石，以堙于东海”，展现了古代先民同大自然残酷抗争、矢志不渝的伟大精神！'
+      },
+      {
+        id: 19,
+        type: 'china',
+        title: '黄帝的妻子嫘祖是一位非常智慧的女性，相传她发明了什么手艺造福人类？',
+        options: ['钻木取火', '烧制陶罐', '养蚕缫丝织布', '造纸术'],
+        correctIndex: 2,
+        explanation: '嫘祖始蚕：嫘祖在桑树下发现蚕茧，发明了采桑养蚕、抽丝织绢的技术，让人们穿上了舒服保暖的衣服。'
+      },
+      {
+        id: 20,
+        type: 'china',
+        title: '在大禹之前，他的父亲鲧曾从天帝那里偷来什么能够不断自我生长的神土去挡水？',
+        options: ['金刚砂', '息壤', '女娲五色土', '灵芝土'],
+        correctIndex: 1,
+        explanation: '鲧偷盗了天帝的“息壤”（一种无论怎么挖都能自己生长增多的神土）来堵塞洪水，最终因违背自然规律而失败。'
+      },
+
+      // ---------- 希腊神话故事 (20题) ----------
+      {
+        id: 21,
+        type: 'greece',
+        title: '在《普罗米修斯》故事中，普罗米修斯把天火藏在什么植物的茎秆里悄悄带到人间？',
+        options: ['茴香秆', '月桂树枝', '橄榄枝', '芦苇管'],
+        correctIndex: 0,
+        explanation: '四年级课文《普罗米修斯》与希腊神话记载：他从阿波罗的太阳车轮上点燃茴香秆，将神圣的火种带给人类！'
+      },
+      {
+        id: 22,
+        type: 'greece',
+        title: '古希腊神话中统治奥林匹斯众神、掌握强大雷电之力的众神之王是谁？',
+        options: ['波塞冬', '阿波罗', '宙斯', '哈迪斯'],
+        correctIndex: 2,
+        explanation: '宙斯是奥林匹斯十二主神之首，他的专属武器是能发出震耳欲聋雷霆与闪电的霹雳雷霆。'
+      },
+      {
+        id: 23,
+        type: 'greece',
+        title: '从宙斯的头颅中全副武装跳出来、象征“智慧与正义战争”的女神是？',
+        options: ['赫拉', '雅典娜', '阿尔忒弥斯', '阿佛洛狄忒'],
+        correctIndex: 1,
+        explanation: '雅典娜出生时就身披金甲、手持长矛，是象征崇高智慧和守护城邦的女神，雅典城便是以她命名！'
+      },
+      {
+        id: 24,
+        type: 'greece',
+        title: '阿波罗是希腊神话中的光明之神与文艺之神，他最擅长弹奏的乐器是？',
+        options: ['里拉琴（七弦琴）', '长笛', '小提琴', '军号'],
+        correctIndex: 0,
+        explanation: '阿波罗英俊非凡，常手持里拉琴（七弦琴），率领九位缪斯女神在奥林匹斯山上演奏优雅天籁。'
+      },
+      {
+        id: 25,
+        type: 'greece',
+        title: '希腊神话中的海神波塞冬，手中最具威慑力的标志性武器是什么？',
+        options: ['黄金弓箭', '三叉戟', '双刃巨斧', '海螺号角'],
+        correctIndex: 1,
+        explanation: '波塞冬手持三叉戟，只要用三叉戟猛击海面，就能掀起滔天巨浪，也能平息海上的狂风暴雨。'
+      },
+      {
+        id: 26,
+        type: 'greece',
+        title: '在《潘多拉的魔盒》故事中，好奇的潘多拉打开盒子释放了无数灾难，最后留在盒底的是什么？',
+        options: ['财富', '希望', '爱情', '真理'],
+        correctIndex: 1,
+        explanation: '虽然贪婪、疾病和痛苦飞散到了人间，但盒子底部永远留存着最宝贵的东西——“希望”！'
+      },
+      {
+        id: 27,
+        type: 'greece',
+        title: '希腊神话中最著名的大力神英雄，曾完成了包括打败尼米亚猛狮在内的“十二项伟大试炼”，他是？',
+        options: ['珀尔修斯', '俄狄浦斯', '赫拉克勒斯', '阿喀琉斯'],
+        correctIndex: 2,
+        explanation: '大力神赫拉克勒斯神勇无比，完成了十二项看似不可能完成的艰难任务，最终升入奥林匹斯神山。'
+      },
+      {
+        id: 28,
+        type: 'greece',
+        title: '著名的“斯芬克斯之谜”：“早晨四条腿，中午两条腿，晚上三条腿”，谜底到底是什么？',
+        options: ['大象', '人类', '神马', '狮子'],
+        correctIndex: 1,
+        explanation: '英雄俄狄浦斯猜中了谜底：“人”！婴儿时四肢爬行，壮年时两腿行走，老年时拄着拐杖像三条腿。'
+      },
+      {
+        id: 29,
+        type: 'greece',
+        title: '大英雄阿喀琉斯出生时被母亲浸入冥河刀枪不入，但他身体唯一的致命弱点在何处？',
+        options: ['心脏', '喉咙', '脚后跟（脚踝）', '后背'],
+        correctIndex: 2,
+        explanation: '母亲握住他的脚后跟浸入冥河，因此脚后跟没有沾到神水，这就是成语“阿喀琉斯之踵”（致命短板）的来源。'
+      },
+      {
+        id: 30,
+        type: 'greece',
+        title: '少年伊卡洛斯用羽毛和蜜蜡制成翅膀飞翔，但因为飞得太高，翅膀被什么融化导致坠海？',
+        options: ['太阳的高温炙烤', '雷神的闪电击中', '狂暴的暴风雪', '飞鸟的利爪抓破'],
+        correctIndex: 0,
+        explanation: '伊卡洛斯沉迷于飞翔的快乐，忘记了父亲的告诫，飞得离太阳太近，太阳的热力融化了蜜蜡，羽毛散落坠海。'
+      },
+      {
+        id: 31,
+        type: 'greece',
+        title: '在长达十年的特洛伊战争中，智谋过人的奥德修斯用什么计策终于攻破了城池？',
+        options: ['地道偷袭战术', '巨大的特洛伊木马计', '火烧敌军战船', '断绝城内水源'],
+        correctIndex: 1,
+        explanation: '希腊联军制造了一具巨大的空心木马，勇士藏在马腹内，特洛伊人将木马当作战利品拖进城，导致城破！'
+      },
+      {
+        id: 32,
+        type: 'greece',
+        title: '为了惩罚普罗米修斯为人类盗火，宙斯派出一只凶猛的什么动物每天啄食他的肝脏？',
+        options: ['毒蛇', '恶龙', '神鹰（高加索恶鹰）', '恶狼'],
+        correctIndex: 2,
+        explanation: '课文《普罗米修斯》讲道：宙斯派凶恶的鹫鹰，每天啄食普罗米修斯的肝脏，但他宁死不屈，绝不向强权低头！'
+      },
+      {
+        id: 33,
+        type: 'greece',
+        title: '在希腊神话中，蛇发女妖美杜莎拥有一项可怕的诅咒，凡是直视她双眼的人都会变成什么？',
+        options: ['黄金', '顽石', '青蛙', '一阵青烟'],
+        correctIndex: 1,
+        explanation: '美杜莎头发是由无数毒蛇组成，目光具有石化魔法，凡是看她眼睛的人立刻化为坚硬的石雕。'
+      },
+      {
+        id: 34,
+        type: 'greece',
+        title: '古希腊神话中，与宙斯、波塞冬并称为三大巨头、掌管阴暗冥界地府的统治者是？',
+        options: ['哈迪斯', '阿瑞斯', '赫尔墨斯', '狄俄尼索斯'],
+        correctIndex: 0,
+        explanation: '冥王哈迪斯镇守冥府深渊，身旁常伴随着守卫地狱大门的三头犬刻耳柏洛斯。'
+      },
+      {
+        id: 35,
+        type: 'greece',
+        title: '最后是谁射死了凶残的恶鹰，砸碎锁链，解救了被锁在高加索悬崖上的普罗米修斯？',
+        options: ['赫拉克勒斯', '雅典娜', '阿波罗', '珀尔修斯'],
+        correctIndex: 0,
+        explanation: '大力神赫拉克勒斯经过悬崖，同情普罗米修斯的遭遇，一箭射落神鹰，砍断锁链救出了这位无私的英雄！'
+      },
+      {
+        id: 36,
+        type: 'greece',
+        title: '在爱琴海的雪白浪花与泡沫中诞生、象征着“爱与美”的希腊女神是？',
+        options: ['赫拉', '阿佛洛狄忒（维纳斯）', '得墨忒耳', '赫斯提亚'],
+        correctIndex: 1,
+        explanation: '阿佛洛狄忒从大海浪花中诞生，被罗马人称为维纳斯，是奥林匹斯山上最具美感的爱与美之神。'
+      },
+      {
+        id: 37,
+        type: 'greece',
+        title: '不和女神厄里斯留下一枚引发三位女神争夺并导致战争的金苹果，苹果上刻着什么字？',
+        options: ['献给最美者', '献给最智慧者', '献给统治者', '献给最富有者'],
+        correctIndex: 0,
+        explanation: '金苹果上刻着“献给最美者”，赫拉、雅典娜、阿佛洛狄忒为此争执不休，引发了著名的特洛伊之战。'
+      },
+      {
+        id: 38,
+        type: 'greece',
+        title: '太阳神阿波罗有一位孪生姐姐，她是手持银弓穿梭在林间的月亮与狩猎女神，名叫？',
+        options: ['雅典娜', '阿尔忒弥斯', '美杜莎', '塞壬'],
+        correctIndex: 1,
+        explanation: '阿尔忒弥斯是月亮神与狩猎女神，喜爱在山野森林中自由驰骋，守护着大自然的野兽与少女。'
+      },
+      {
+        id: 39,
+        type: 'greece',
+        title: '在辽阔的希腊海域，经常用如天籁般妖娆动人的歌声诱惑过往水手使其触礁沉没的海妖是？',
+        options: ['斯库拉', '塞壬女妖', '奇美拉', '美杜莎'],
+        correctIndex: 1,
+        explanation: '塞壬拥有无比美妙的歌声，听到的水手都会神魂颠倒驾船撞上海礁，奥德修斯用蜡封住水手耳朵才安全通过。'
+      },
+      {
+        id: 40,
+        type: 'greece',
+        title: '希腊神话中诞生于美杜莎身躯、长着雪白巨大双翼、能够冲向云霄的神马叫什么？',
+        options: ['珀伽索斯（飞马）', '赤兔马', '布西发拉斯', '独角兽'],
+        correctIndex: 0,
+        explanation: '珀伽索斯是希腊神话中的双翼神马，它的蹄子踏在赫利孔山上，踏出了给诗人带来灵感的神泉！'
+      }
+    ];
+
+    /* ==========================================================
+       状态与核心控制器
+       ========================================================== */
+    const State = {
+      student: { class: '', id: '', name: '' },
+      questions: [],         // 本次抽取的20道题
+      currentIndex: 0,       // 当前进行到第几题
+      score: 0,              // 当前客观题总分
+      userAnswers: [],       // 用户的作答记录 [{question, selectedIndex, isCorrect}]
+      startTime: null,
+      endTime: null,
+      essayHero: '',
+      essayContent: '',
+      isSoundOn: true,
+      audioCtx: null,
+      isRecording: false,
+      recordTimer: null
+    };
+
+    /* ==========================================================
+       Web Audio API 零依赖微型合成音效系统
+       ========================================================== */
+    function initAudio() {
+      if (!State.audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          State.audioCtx = new AudioContext();
+        }
+      }
+      if (State.audioCtx && State.audioCtx.state === 'suspended') {
+        State.audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (!State.isSoundOn) return;
+      try {
+        initAudio();
+        if (!State.audioCtx) return;
+        const ctx = State.audioCtx;
+        const now = ctx.currentTime;
+
+        if (type === 'click') {
+          // 清脆水滴音
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.09);
+        } else if (type === 'correct') {
+          // 欢快胜利大三和弦 (C5 - E5 - G5 - C6)
+          const freqs = [523.25, 659.25, 783.99, 1046.5];
+          freqs.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+            gain.gain.setValueAtTime(0.25, now + idx * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.25);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + idx * 0.07);
+            osc.stop(now + idx * 0.07 + 0.26);
+          });
+        } else if (type === 'wrong') {
+          // 低沉提示音
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.linearRampToValueAtTime(140, now + 0.22);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.23);
+        } else if (type === 'win') {
+          // 华丽凯旋号角乐章
+          const notes = [440, 554, 659, 880, 1108];
+          notes.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.12);
+            gain.gain.setValueAtTime(0.28, now + i * 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.12);
+            osc.stop(now + i * 0.12 + 0.45);
+          });
+        }
+      } catch (e) {
+        console.warn('Audio play exception: ', e);
+      }
+    }
+
+    function toggleSound() {
+      State.isSoundOn = !State.isSoundOn;
+      const icon = document.getElementById('soundIcon');
+      const label = document.getElementById('soundLabel');
+      if (State.isSoundOn) {
+        icon.textContent = '🔊';
+        label.textContent = '音效: 开';
+        initAudio();
+        playSound('click');
+      } else {
+        icon.textContent = '🔇';
+        label.textContent = '音效: 关';
+      }
+    }
+
+    /* ==========================================================
+       随机抽题与打乱算法 (Fisher-Yates Shuffle)
+       ========================================================== */
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // 从40题中随机抽选20题，并将选项打乱
+    function prepareRandomQuiz() {
+      const shuffledBank = shuffleArray(FULL_QUESTION_BANK);
+      const selected = shuffledBank.slice(0, 20);
+
+      // 对每个题目的选项打乱，并修正 correctIndex
+      return selected.map(q => {
+        const originalOptions = q.options.map((text, idx) => ({
+          text,
+          isCorrect: idx === q.correctIndex
+        }));
+        const shuffledOptions = shuffleArray(originalOptions);
+        const newCorrectIndex = shuffledOptions.findIndex(o => o.isCorrect);
+
+        return {
+          id: q.id,
+          type: q.type,
+          title: q.title,
+          options: shuffledOptions.map(o => o.text),
+          correctIndex: newCorrectIndex,
+          explanation: q.explanation
+        };
+      });
+    }
+
+    /* ==========================================================
+       页面流转控制
+       ========================================================== */
+    function showPage(pageId) {
+      ['pageWelcome', 'pageQuiz', 'pageEssay', 'pageResult'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === pageId) ? 'block' : 'none';
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 开启试炼
+    function startAdventure() {
+      initAudio();
+      playSound('click');
+
+      const sClass = document.getElementById('studentClass').value.trim();
+      const sId = document.getElementById('studentId').value.trim();
+      const sName = document.getElementById('studentName').value.trim();
+
+      if (!sName) {
+        alert('请在勇士名册写下你的姓名，开启神话冒险！');
+        document.getElementById('studentName').focus();
+        return;
+      }
+
+      State.student = {
+        class: sClass || '四年级',
+        id: sId ? sId + '号' : '学霸勇士',
+        name: sName
+      };
+
+      // 初始化题目与状态
+      State.questions = prepareRandomQuiz();
+      State.currentIndex = 0;
+      State.score = 0;
+      State.userAnswers = [];
+      State.startTime = new Date();
+
+      document.getElementById('hudName').textContent = `${State.student.name} (${State.student.class})`;
+      showPage('pageQuiz');
+      renderQuestion();
+    }
+
+    // 渲染单题
+    function renderQuestion() {
+      const q = State.questions[State.currentIndex];
+      const total = State.questions.length;
+      const progressPercent = ((State.currentIndex + 1) / total) * 100;
+
+      // 更新进度与得分
+      document.getElementById('currentQIndexText').textContent = State.currentIndex + 1;
+      document.getElementById('hudScoreText').textContent = `${State.score} 分`;
+      document.getElementById('quizProgressBar').style.width = `${progressPercent}%`;
+
+      // 题型徽章
+      const typeBadge = document.getElementById('qTypeBadge');
+      const typeIcon = document.getElementById('qTypeIcon');
+      const typeText = document.getElementById('qTypeText');
+      if (q.type === 'china') {
+        typeBadge.className = 'q-type-badge badge-china';
+        typeIcon.textContent = '🐉';
+        typeText.textContent = '【中国古代神话】';
+      } else {
+        typeBadge.className = 'q-type-badge badge-greece';
+        typeIcon.textContent = '🏛️';
+        typeText.textContent = '【希腊神话故事】';
+      }
+
+      // 题干
+      document.getElementById('questionTitle').textContent = `${State.currentIndex + 1}. ${q.title}`;
+
+      // 选项渲染
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+      const letters = ['A', 'B', 'C', 'D'];
+
+      q.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = `
+          <span class="option-tag">${letters[idx]}</span>
+          <span style="flex:1;">${optText}</span>
+        `;
+        btn.onclick = () => selectOption(idx, btn);
+        container.appendChild(btn);
+      });
+
+      // 隐藏解析与下一题按钮
+      const expBox = document.getElementById('explanationBox');
+      expBox.style.display = 'none';
+      document.getElementById('nextBtn').style.display = 'none';
+    }
+
+    // 答题选择
+    function selectOption(selectedIndex, clickedBtn) {
+      const q = State.questions[State.currentIndex];
+      const isCorrect = selectedIndex === q.correctIndex;
+      const container = document.getElementById('optionsContainer');
+      const allBtns = container.querySelectorAll('.option-btn');
+
+      // 禁用所有选项再次点击
+      allBtns.forEach(b => b.classList.add('disabled'));
+
+      // 标记对错视觉
+      if (isCorrect) {
+        clickedBtn.classList.add('correct');
+        State.score += 5; // 每题5分
+        playSound('correct');
+      } else {
+        clickedBtn.classList.add('wrong');
+        allBtns[q.correctIndex].classList.add('correct');
+        playSound('wrong');
+      }
+
+      // 记录答题结果
+      State.userAnswers.push({
+        question: q,
+        selectedIndex: selectedIndex,
+        isCorrect: isCorrect
+      });
+
+      // 实时更新顶部 HUD 得分
+      document.getElementById('hudScoreText').textContent = `${State.score} 分`;
+
+      // 显示趣味小秘闻解析
+      const expBox = document.getElementById('explanationBox');
+      document.getElementById('expContent').textContent = q.explanation;
+      expBox.style.display = 'block';
+
+      // 弹出下一题或进入压轴题按钮
+      const nextBtn = document.getElementById('nextBtn');
+      const nextBtnText = document.getElementById('nextBtnText');
+      if (State.currentIndex === State.questions.length - 1) {
+        nextBtnText.textContent = '完成客观题，前往压轴口语演说 ➔';
+      } else {
+        nextBtnText.textContent = '回答完毕，进入下一关 ➔';
+      }
+      nextBtn.style.display = 'flex';
+    }
+
+    // 点击下一题
+    function handleNextQuestion() {
+      playSound('click');
+      if (State.currentIndex < State.questions.length - 1) {
+        State.currentIndex++;
+        renderQuestion();
+      } else {
+        // 客观题结束，进入压轴题
+        showPage('pageEssay');
+      }
+    }
+
+    /* ==========================================================
+       阶段 3：口语压轴题交互
+       ========================================================== */
+    function selectHeroChip(chipEl, heroName) {
+      playSound('click');
+      document.querySelectorAll('.hero-chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+      State.essayHero = heroName;
+
+      const textarea = document.getElementById('essayInput');
+      const prefix = `我最喜欢的神话人物是【${heroName}】。\n因为在神话故事中，他/她……\n这个故事给我的启示是……`;
+      if (!textarea.value.trim() || textarea.value.startsWith('我最喜欢的神话人物是【')) {
+        textarea.value = prefix;
+        textarea.focus();
+      }
+    }
+
+    // 模拟录音与波形跳动
+    function toggleVoiceRecord() {
+      playSound('click');
+      const btn = document.getElementById('recordBtn');
+      const icon = document.getElementById('recordIcon');
+      const label = document.getElementById('recordLabel');
+      const status = document.getElementById('voiceStatus');
+      const waveBox = document.getElementById('soundWaveBox');
+
+      if (!State.isRecording) {
+        State.isRecording = true;
+        btn.style.background = '#059669';
+        icon.textContent = '⏹️';
+        label.textContent = '完成演说并停止';
+        status.textContent = '🔴 正在录音演说中，请大声朗读...';
+        waveBox.classList.add('recording');
+      } else {
+        State.isRecording = false;
+        btn.style.background = '#EF4444';
+        icon.textContent = '🎙️';
+        label.textContent = '重新口语演说';
+        status.textContent = '✅ 口语演说已收录，真棒！';
+        waveBox.classList.remove('recording');
+        playSound('correct');
+      }
+    }
+
+    // 提交压轴题
+    function submitFinalEssay() {
+      initAudio();
+      playSound('click');
+
+      const content = document.getElementById('essayInput').value.trim();
+      if (!content || content.length < 15) {
+        alert('小勇士，请至少写下 15 个字，完整表达你喜欢这位神话人物的理由哦！');
+        document.getElementById('essayInput').focus();
+        return;
+      }
+
+      State.essayContent = content;
+      State.endTime = new Date();
+
+      // 如果未选择 chip，尝试从文本提取
+      if (!State.essayHero) {
+        const found = ['盘古', '普罗米修斯', '女娲', '精卫', '雅典娜', '后羿', '大禹', '赫拉克勒斯', '夸父'].find(h => content.includes(h));
+        State.essayHero = found || '神话传奇英雄';
+      }
+
+      finishAdventure();
+    }
+
+    /* ==========================================================
+       阶段 4：结算与封神大榜
+       ========================================================== */
+    function finishAdventure() {
+      showPage('pageResult');
+      playSound('win');
+      triggerConfetti();
+
+      // 得分展示
+      document.getElementById('finalScoreVal').textContent = State.score;
+
+      // 评定称号
+      const rankTitle = document.getElementById('finalRankTitle');
+      const rankDesc = document.getElementById('finalRankDesc');
+      if (State.score === 100) {
+        rankTitle.textContent = '👑【创世神话大宗师】👑';
+        rankDesc.textContent = '太不可思议了！20道中西神话全对，思维缜密，堪比雅典娜与盘古！';
+      } else if (State.score >= 90) {
+        rankTitle.textContent = '🌟【奥林匹斯主神勇士】🌟';
+        rankDesc.textContent = '学贯中西神话！神话知识储备令人惊叹，名副其实的神话达人！';
+      } else if (State.score >= 80) {
+        rankTitle.textContent = '🛡️【智慧先锋·神界探险家】🛡️';
+        rankDesc.textContent = '表现非常出色！大多数神话试炼都轻松通关，继续加油！';
+      } else if (State.score >= 60) {
+        rankTitle.textContent = '🌱【勇敢雏鹰·神话小学者】🌱';
+        rankDesc.textContent = '顺利及格！再细心回顾一下错题，你的神话世界会更加浩瀚！';
+      } else {
+        rankTitle.textContent = '📜【笃行学徒·神殿潜修者】📜';
+        rankDesc.textContent = '神话的大门已经为你敞开，仔细复习《中国古代神话》与《希腊神话》，再战必胜！';
+      }
+
+      // 战报统计
+      const correctCount = State.userAnswers.filter(a => a.isCorrect).length;
+      document.getElementById('statCorrectCount').textContent = `${correctCount} / 20 题`;
+
+      const durationSec = Math.max(1, Math.round((State.endTime - State.startTime) / 1000));
+      const min = Math.floor(durationSec / 60);
+      const sec = durationSec % 60;
+      document.getElementById('statDuration').textContent = `${min}分${sec}秒`;
+
+      // 压轴口语摘录
+      document.getElementById('resultHeroTag').textContent = `[${State.essayHero}]`;
+      document.getElementById('resultEssayQuote').textContent = `“${State.essayContent}”`;
+
+      // 渲染错题与题解
+      renderReviewItems();
+    }
+
+    function renderReviewItems() {
+      const list = document.getElementById('reviewItemsContainer');
+      list.innerHTML = '';
+      const letters = ['A', 'B', 'C', 'D'];
+
+      State.userAnswers.forEach((record, idx) => {
+        const q = record.question;
+        const div = document.createElement('div');
+        div.className = `review-item ${record.isCorrect ? 'is-right' : 'is-wrong'}`;
+        div.innerHTML = `
+          <div style="font-weight:700; color:#1F2937; margin-bottom:4px;">
+            ${idx + 1}. ${q.title}
+          </div>
+          <div style="margin-bottom:4px;">
+            你的作答: <span style="font-weight:700; color:${record.isCorrect ? '#10B981' : '#EF4444'};">
+              ${letters[record.selectedIndex]}. ${q.options[record.selectedIndex]}
+            </span>
+            ${!record.isCorrect ? `<span style="color:#10B981; margin-left:10px;">正确答案: ${letters[q.correctIndex]}. ${q.options[q.correctIndex]}</span>` : ' (回答正确 🎉)'}
+          </div>
+          <div style="font-size:12px; color:#6B7280; background:#F8FAFC; padding:6px 10px; border-radius:6px; margin-top:4px;">
+            💡 <strong>秘闻解析：</strong>${q.explanation}
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function toggleReviewDrawer() {
+      playSound('click');
+      const list = document.getElementById('reviewItemsContainer');
+      const arrow = document.getElementById('reviewArrow');
+      if (list.style.display === 'flex') {
+        list.style.display = 'none';
+        arrow.textContent = '▼';
+      } else {
+        list.style.display = 'flex';
+        arrow.textContent = '▲';
+      }
+    }
+
+    function restartAdventure() {
+      playSound('click');
+      if (confirm('确定要重新打乱题库，开启新一轮神话闯关吗？')) {
+        startAdventure();
+      }
+    }
+
+    /* ==========================================================
+       生成海报奖状（纯原生 Canvas 绘制，零外部网络依赖）
+       ========================================================== */
+    // Canvas roundRect 垫片兼容（确保老款 iPad / 老版平板 100% 正常运行）
+    if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (typeof r === 'undefined') r = 0;
+        if (typeof r === 'number') r = [r, r, r, r];
+        const rad = r[0] || 0;
+        this.beginPath();
+        this.moveTo(x + rad, y);
+        this.lineTo(x + w - rad, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + rad);
+        this.lineTo(x + w, y + h - rad);
+        this.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        this.lineTo(x + rad, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - rad);
+        this.lineTo(x, y + rad);
+        this.quadraticCurveTo(x, y, x + rad, y);
+        this.closePath();
+        return this;
+      };
+    }
+
+    function generateAwardPoster() {
+      playSound('click');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      // 适合手机与平板高清视网膜屏幕（1200 x 1600）
+      canvas.width = 1200;
+      canvas.height = 1600;
+
+      // 1. 底色渐变
+      const bgGrad = ctx.createLinearGradient(0, 0, 1200, 1600);
+      bgGrad.addColorStop(0, '#1e1b4b');
+      bgGrad.addColorStop(0.4, '#312e81');
+      bgGrad.addColorStop(1, '#0f172a');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 1200, 1600);
+
+      // 2. 华丽羊皮纸证书白卡
+      ctx.save();
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = 'rgba(0,0,0,0.3)';
+      ctx.shadowBlur = 40;
+      ctx.roundRect(60, 60, 1080, 1480, 36);
+      ctx.fill();
+      ctx.restore();
+
+      // 3. 金色双边框装饰
+      ctx.strokeStyle = '#F59E0B';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(90, 90, 1020, 1420);
+
+      ctx.strokeStyle = '#FCD34D';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(102, 102, 996, 1396);
+
+      // 4. 标题
+      ctx.fillStyle = '#D97706';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⭐ 四年级语文神话单元 · 荣誉战报 ⭐', 600, 175);
+
+      ctx.fillStyle = '#7C2D12';
+      ctx.font = '900 58px sans-serif';
+      ctx.fillText('神话探秘大闯关 结业证书', 600, 255);
+
+      // 5. 授勋学生信息
+      ctx.fillStyle = '#1F2937';
+      ctx.font = 'bold 36px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`勇士姓名：${State.student.name}`, 140, 350);
+      ctx.fillText(`班级学号：${State.student.class}  ${State.student.id}`, 140, 410);
+
+      // 6. 得分勋章大金环
+      ctx.beginPath();
+      ctx.arc(600, 560, 110, 0, Math.PI * 2);
+      ctx.fillStyle = '#FEF3C7';
+      ctx.fill();
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = '#F59E0B';
+      ctx.stroke();
+
+      ctx.fillStyle = '#B45309';
+      ctx.font = '900 86px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${State.score}`, 600, 580);
+
+      ctx.font = 'bold 26px sans-serif';
+      ctx.fillStyle = '#92400E';
+      ctx.fillText('客观题得分', 600, 630);
+
+      // 7. 神圣封号
+      const rankTitle = document.getElementById('finalRankTitle').textContent;
+      ctx.fillStyle = '#4C1D95';
+      ctx.font = '900 44px sans-serif';
+      ctx.fillText(rankTitle, 600, 740);
+
+      // 8. 试炼数据小板块
+      ctx.fillStyle = '#F8FAFC';
+      ctx.roundRect(140, 780, 920, 120, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#E2E8F0';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const correctCount = State.userAnswers.filter(a => a.isCorrect).length;
+      ctx.fillStyle = '#64748B';
+      ctx.font = '24px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`答对题数：${correctCount} / 20 题`, 180, 850);
+      ctx.fillText(`答题用时：${document.getElementById('statDuration').textContent}`, 560, 850);
+
+      // 9. 压轴演说摘录
+      ctx.fillStyle = '#FAF5FF';
+      ctx.roundRect(140, 930, 920, 380, 24);
+      ctx.fill();
+      ctx.strokeStyle = '#D8B4FE';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#6B21A8';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.fillText(`🎤 压轴演说心语 · 最喜欢的人物【${State.essayHero}】：`, 180, 985);
+
+      // 自动折行绘制演说词
+      ctx.fillStyle = '#334155';
+      ctx.font = '28px sans-serif';
+      wrapText(ctx, `“${State.essayContent}”`, 180, 1045, 840, 44);
+
+      // 10. 印章与落款
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'right';
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+      ctx.fillText(`颁发日期：${dateStr}`, 1020, 1420);
+      ctx.fillText('四年级语文神话评定组 监制', 1020, 1455);
+
+      // 绘制仿真红色公章
+      ctx.save();
+      ctx.translate(940, 1370);
+      ctx.rotate(-0.15);
+      ctx.beginPath();
+      ctx.arc(0, 0, 60, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(220, 38, 38, 0.75)';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(220, 38, 38, 0.75)';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('神话大通关', 0, -10);
+      ctx.fillText('授勋认证', 0, 22);
+      ctx.restore();
+
+      // 导出为图片
+      const dataUrl = canvas.toDataURL('image/png');
+      document.getElementById('posterImg').src = dataUrl;
+      document.getElementById('downloadPosterLink').href = dataUrl;
+      document.getElementById('posterModal').style.display = 'flex';
+    }
+
+    // 辅助文本自动换行
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      let line = '';
+      for (let n = 0; n < text.length; n++) {
+        const testLine = line + text[n];
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          ctx.fillText(line, x, y);
+          line = text[n];
+          y += lineHeight;
+          if (y > 1260) {
+            ctx.fillText(line + '...', x, y);
+            return;
+          }
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, y);
+    }
+
+    /* ==========================================================
+       撒花特效 (Confetti Canvas)
+       ========================================================== */
+    function triggerConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#EC4899', '#8B5CF6'];
+
+      for (let i = 0; i < 90; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 14,
+          vy: (Math.random() - 0.7) * 16,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          vRot: (Math.random() - 0.5) * 10
+        });
+      }
+
+      let frame = 0;
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.35; // 重力
+          p.rotation += p.vRot;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+
+        frame++;
+        if (frame < 130) {
+          requestAnimationFrame(animate);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      animate();
+    }
+
+    /* ==========================================================
+       弹窗与平板帮助
+       ========================================================== */
+    function openHelpModal() {
+      playSound('click');
+      document.getElementById('helpModal').style.display = 'flex';
+    }
+    function closeHelpModal() {
+      playSound('click');
+      document.getElementById('helpModal').style.display = 'none';
+    }
+    function closePosterModal() {
+      playSound('click');
+      document.getElementById('posterModal').style.display = 'none';
+    }
+    function closeModalOnBackdrop(e, modalId) {
+      if (e.target.id === modalId) {
+        document.getElementById(modalId).style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>

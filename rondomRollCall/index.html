@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>课堂随机点名主题乐园 - 15款趣味神器合集</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --bg: #090d16;
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 60%, #020617 100%);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      padding: clamp(20px, 3vh, 40px) clamp(16px, 3vw, 36px);
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: clamp(20px, 3vh, 36px);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: 20px;
+      background: rgba(99, 102, 241, 0.18);
+      border: 1px solid rgba(99, 102, 241, 0.45);
+      color: #a5b4fc;
+      font-size: clamp(12px, 1.2vw, 14px);
+      font-weight: 800;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    h1 {
+      font-size: clamp(26px, 3.5vw, 44px);
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 50%, #93c5fd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      font-size: clamp(13px, 1.3vw, 16px);
+      color: var(--text-dim);
+      max-width: 820px;
+      margin: 0 auto 18px;
+      line-height: 1.6;
+    }
+
+    .global-toolbar {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .btn-global-manage {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      color: #fff;
+      padding: clamp(10px, 1.4vh, 14px) clamp(22px, 2.5vw, 36px);
+      border-radius: 12px;
+      font-size: clamp(14px, 1.3vw, 16px);
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-global-manage:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.65);
+    }
+
+    .features-strip {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: clamp(24px, 3vh, 36px);
+    }
+    .f-tag {
+      font-size: clamp(12px, 1.1vw, 13px);
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      padding: 5px 14px;
+      border-radius: 18px;
+      font-weight: 700;
+    }
+
+    /* 15套网格卡片布局 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(clamp(280px, 26vw, 380px), 1fr));
+      gap: clamp(14px, 1.8vw, 24px);
+    }
+
+    .tool-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 20px;
+      padding: clamp(18px, 2.2vh, 26px);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .tool-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.6);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .card-icon {
+      width: clamp(44px, 5vh, 56px);
+      height: clamp(44px, 5vh, 56px);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(24px, 3vh, 32px);
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .card-meta h3 {
+      font-size: clamp(16px, 1.5vw, 19px);
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .card-meta span {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid;
+      font-weight: 700;
+    }
+
+    .card-desc {
+      font-size: clamp(13px, 1.2vw, 14px);
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .btn-open {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid var(--card-border);
+      color: #fff;
+      text-decoration: none;
+      padding: clamp(10px, 1.3vh, 13px);
+      border-radius: 12px;
+      text-align: center;
+      font-size: clamp(13px, 1.2vw, 15px);
+      font-weight: 800;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+    .btn-open:hover {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      border-color: #6366f1;
+      transform: scale(1.02);
+      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+    }
+
+    /* 弹窗 */
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal {
+      background: #0f172a;
+      border: 1.5px solid var(--card-border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 620px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+    }
+    .modal textarea {
+      width: 100%;
+      height: 220px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      color: #fff;
+      padding: 12px;
+      font-size: 14px;
+      line-height: 1.5;
+      resize: vertical;
+      font-family: monospace;
+      outline: none;
+    }
+    .modal-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-top: 1px solid var(--card-border);
+      padding-top: 12px;
+    }
+    .btn-sub {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      border: none;
+      color: #fff;
+      font-weight: 800;
+      padding: 7px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    footer {
+      margin-top: 45px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge">🎉 互动课堂趣味工具箱</div>
+      <h1>课堂随机点名主题乐园</h1>
+      <p class="subtitle">
+        点亮课堂活力 · 激发学生期待 · 大屏与白板互动教学优选<br>
+        全系支持 1 至 6 人自由连选，内置欢快互动音效与绚丽通关庆典！
+      </p>
+      <div class="global-toolbar">
+        <button class="btn-global-manage" id="btn-global-manage">
+          <span>📝 班级名单管理 (一键修改与导入名单)</span>
+        </button>
+      </div>
+      <div class="features-strip">
+        <span class="f-tag">✨ 15款趣味视觉主题</span>
+        <span class="f-tag">🎲 1~6人自由连选</span>
+        <span class="f-tag">🖥️ 大屏/白板/电脑全适配</span>
+        <span class="f-tag">🎵 动感游戏互动音效</span>
+        <span class="f-tag">📂 支持TXT名单导入与导出</span>
+        <span class="f-tag">🚀 免安装即开即用</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#6366f1;">⚡</div>
+        <div class="card-meta">
+          <h3>大屏极速点名</h3>
+          <span style="color:#6366f1;border-color:#6366f1;">霓虹极速版</span>
+        </div>
+      </div>
+      <div class="card-desc">大屏沉浸式科技流光极速闪烁，停驻时带减速锁定效果与电光火花爆裂，数字与姓名大字醒目清晰。</div>
+    </div>
+    <a class="btn-open" href="./01-大屏极速点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#f59e0b;">🎡</div>
+        <div class="card-meta">
+          <h3>幸运大转盘点名</h3>
+          <span style="color:#f59e0b;border-color:#f59e0b;">经典转盘版</span>
+        </div>
+      </div>
+      <div class="card-desc">狂欢节七彩大转盘物理阻尼旋转，外圈环绕跑马灯，顶部红色指针带机械碰撞拨动声，停下后指向中奖扇区并弹窗庆祝。</div>
+    </div>
+    <a class="btn-open" href="./02-幸运大转盘点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#ef4444;">🎰</div>
+        <div class="card-meta">
+          <h3>老虎机摇号点名</h3>
+          <span style="color:#ef4444;border-color:#ef4444;">街机拉杆版</span>
+        </div>
+      </div>
+      <div class="card-desc">复古电玩街机造型，配有右侧可拉动/点击的机械摇杆，多个滚轮飞速滚动并依次咬合锁定，掉落金币通关庆祝。</div>
+    </div>
+    <a class="btn-open" href="./03-老虎机摇号点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#8b5cf6;">🃏</div>
+        <div class="card-meta">
+          <h3>神秘翻牌盲盒点名</h3>
+          <span style="color:#8b5cf6;border-color:#8b5cf6;">3D卡牌版</span>
+        </div>
+      </div>
+      <div class="card-desc">全班卡牌矩阵整齐排列，支持一键3D洗牌打乱，抽选时光标在神秘卡片间高速跳跃锁定，并优雅立体翻开公布学生。</div>
+    </div>
+    <a class="btn-open" href="./04-神秘翻牌盲盒点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#06b6d4;">🌐</div>
+        <div class="card-meta">
+          <h3>3D科幻星空球体点名</h3>
+          <span style="color:#06b6d4;border-color:#06b6d4;">星空矩阵版</span>
+        </div>
+      </div>
+      <div class="card-desc">全景3D立体星空球体，可用鼠标自由拖拽旋转观察全班学生，摇号时瞬间曲率加速，随后触发激光HUD准心锁定。</div>
+    </div>
+    <a class="btn-open" href="./05-3D科幻星空球体/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#f43f5e;">🎁</div>
+        <div class="card-meta">
+          <h3>欢乐扭蛋机点名</h3>
+          <span style="color:#f43f5e;border-color:#f43f5e;">童趣扭蛋版</span>
+        </div>
+      </div>
+      <div class="card-desc">卡通扭蛋机透明玻璃仓内彩色双色小球剧烈弹性碰撞翻滚，扭动把手后金蛋沿轨道滚出并爆裂金光揭晓。</div>
+    </div>
+    <a class="btn-open" href="./06-欢乐扭蛋机点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#f97316;">🏎️</div>
+        <div class="card-meta">
+          <h3>赛车竞速冲刺点名</h3>
+          <span style="color:#f97316;border-color:#f97316;">极速赛车版</span>
+        </div>
+      </div>
+      <div class="card-desc">赛车跑道极速飞驰，赛车轰鸣引擎声，黑白方格旗终点挥动，角逐出冲线冠军并登上领奖台！</div>
+    </div>
+    <a class="btn-open" href="./07-赛车竞速冲刺点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#eab308;">🪙</div>
+        <div class="card-meta">
+          <h3>刮刮乐盲盒点名</h3>
+          <span style="color:#eab308;border-color:#eab308;">刮刮金券版</span>
+        </div>
+      </div>
+      <div class="card-desc">真实刮刮乐彩票，金币划过擦除银灰色闪粉涂层，伴随沙沙刮卡音效，擦出特等奖学生金券！</div>
+    </div>
+    <a class="btn-open" href="./08-刮刮乐盲盒点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#10b981;">🪂</div>
+        <div class="card-meta">
+          <h3>吃鸡空投箱点名</h3>
+          <span style="color:#10b981;border-color:#10b981;">空投补给版</span>
+        </div>
+      </div>
+      <div class="card-desc">红色信号烟雾升腾，巨大降落伞带着空投箱缓缓降落，箱盖爆开发光，揭晓传说级神装同学！</div>
+    </div>
+    <a class="btn-open" href="./09-吃鸡空投补给箱点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#ec4899;">🫧</div>
+        <div class="card-meta">
+          <h3>弹幕气泡爆炸点名</h3>
+          <span style="color:#ec4899;border-color:#ec4899;">梦幻气泡版</span>
+        </div>
+      </div>
+      <div class="card-desc">梦幻荧光彩色泡泡在空中漂浮升腾，准心锁定气泡，咔嚓一声爆破成满天闪烁飞星并揭晓名单！</div>
+    </div>
+    <a class="btn-open" href="./10-弹幕气泡爆炸点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#14b8a6;">🎭</div>
+        <div class="card-meta">
+          <h3>聚光灯黑板剧场点名</h3>
+          <span style="color:#14b8a6;border-color:#14b8a6;">复古黑板版</span>
+        </div>
+      </div>
+      <div class="card-desc">经典实木边框大黑板，剧场追光灯左右穿透扫射，最终交汇聚焦在黑板正中，以逼真粉笔字浮现学生名字！</div>
+    </div>
+    <a class="btn-open" href="./11-聚光灯黑板剧场点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#a855f7;">📦</div>
+        <div class="card-meta">
+          <h3>盲盒拆拆乐点名</h3>
+          <span style="color:#a855f7;border-color:#a855f7;">潮玩拆盒版</span>
+        </div>
+      </div>
+      <div class="card-desc">潮玩盲盒铝箔包装袋，伴随撕开封条虚线的沙沙声，包装撕开金光迸射，弹出专属学生立牌！</div>
+    </div>
+    <a class="btn-open" href="./12-盲盒拆拆乐点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#38bdf8;">🔮</div>
+        <div class="card-meta">
+          <h3>时空传送阵法点名</h3>
+          <span style="color:#38bdf8;border-color:#38bdf8;">魔法阵法版</span>
+        </div>
+      </div>
+      <div class="card-desc">古代六芒星符文阵法发光旋转充能，天降一道璀璨时空光柱，将选中的学生从时空隧道折跃传送而来！</div>
+    </div>
+    <a class="btn-open" href="./13-时空传送阵法点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#eab308;">🔨</div>
+        <div class="card-meta">
+          <h3>幸运金蛋大锤敲点名</h3>
+          <span style="color:#eab308;border-color:#eab308;">砸金蛋欢庆版</span>
+        </div>
+      </div>
+      <div class="card-desc">红丝绒基座上金蛋并列，黄金大锤凌空砸下，蛋壳四分五裂迸射金光与漫天金币，揭晓幸运星！</div>
+    </div>
+    <a class="btn-open" href="./14-幸运金蛋大锤敲点名/index.html">进入点名</a>
+  </div>
+
+
+  <div class="tool-card">
+    <div>
+      <div class="card-top">
+        <div class="card-icon" style="color:#6366f1;">🎲</div>
+        <div class="card-meta">
+          <h3>转动魔方矩阵点名</h3>
+          <span style="color:#6366f1;border-color:#6366f1;">3D魔方矩阵版</span>
+        </div>
+      </div>
+      <div class="card-desc">3D赛博魔方立体旋转翻滚解码，机械齿轮转动声，最终六面色块拼合锁定，亮出中选学生！</div>
+    </div>
+    <a class="btn-open" href="./15-转动魔方矩阵点名/index.html">进入点名</a>
+  </div>
+
+    </div>
+
+    <footer>
+      <p>💡 <b>使用提示</b>：点击上方【📝 班级名单管理】即可粘贴或导入您的学生名单，全部 15 款样式立即同步生效！</p>
+      <p>快捷键通用支持：按 <kbd style="background:rgba(255,255,255,0.15);padding:2px 6px;border-radius:4px;">空格 Space</kbd> 开始/停止，按 <kbd style="background:rgba(255,255,255,0.15);padding:2px 6px;border-radius:4px;">F</kbd> 全屏，按 <kbd style="background:rgba(255,255,255,0.15);padding:2px 6px;border-radius:4px;">R</kbd> 重置当前轮次。</p>
+    </footer>
+  </div>
+
+  <!-- 全局名单设置弹窗 -->
+  <div class="modal-backdrop" id="modal-manage">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--card-border);padding-bottom:10px;">
+        <h3 style="font-size:18px;color:#fff;font-weight:800;">📝 班级名单管理</h3>
+        <button id="modal-close" style="background:none;border:none;color:#94a3b8;font-size:24px;cursor:pointer;">&times;</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-dim);line-height:1.5;">
+        格式：<b>学号 姓名</b>（例如：<code>202401 张三</code>，每行一个）。<br>
+        在这里保存后，整套 15 款点名模板均会自动同步生效！
+      </p>
+      <textarea id="txt-input"></textarea>
+      <div class="modal-foot">
+        <div style="display:flex;gap:8px;">
+          <input type="file" id="file-input" accept=".txt" style="display:none;">
+          <button class="btn-sub" id="btn-import-txt">📂 导入 .txt 名单</button>
+          <button class="btn-sub" id="btn-export-txt">💾 导出 .txt 名单</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sub" id="btn-restore-default">恢复默认名单</button>
+          <button class="btn-primary" id="btn-save-list">保存并应用</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_STUDENTS_RAW = `01 陈晨
+02 林子轩
+03 王梓涵
+04 李雨欣
+05 张天宇
+06 刘思齐
+07 黄俊杰
+08 杨博文
+09 赵嘉欣
+10 周子豪
+11 吴佳琪
+12 孙宇涵
+13 徐浩然
+14 朱梦瑶
+15 郭宇轩
+16 何语嫣
+17 高若萱
+18 罗博宇
+19 郑泽宇
+20 梁欣怡
+21 谢梓桐
+22 宋雨泽
+23 唐子默
+24 许博涵
+25 韩雪儿
+26 冯天逸
+27 邓子墨
+28 曹雨菲
+29 彭子轩
+30 曾俊杰
+31 萧雅涵
+32 田浩宇
+33 董思源
+34 袁梦洁
+35 潘宇恒
+36 于心怡
+37 蒋明远
+38 蔡雨桐
+39 余泽楷
+40 杜佳慧
+41 叶子凡
+42 程思琪
+43 苏晨辉
+44 魏梓琪
+45 薛子轩`;
+    const GLOBAL_KEY = 'CLASSROOM_ROLLCALL_STUDENTS_GLOBAL';
+
+    const modal = document.getElementById('modal-manage');
+    const txtInput = document.getElementById('txt-input');
+
+    function loadList() {
+      const saved = localStorage.getItem(GLOBAL_KEY);
+      if (saved && saved.trim()) {
+        txtInput.value = saved;
+      } else {
+        txtInput.value = DEFAULT_STUDENTS_RAW;
+        localStorage.setItem(GLOBAL_KEY, DEFAULT_STUDENTS_RAW);
+      }
+    }
+
+    document.getElementById('btn-global-manage').addEventListener('click', () => {
+      loadList();
+      modal.classList.add('active');
+    });
+
+    document.getElementById('modal-close').addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.remove('active');
+    });
+
+    document.getElementById('btn-save-list').addEventListener('click', () => {
+      const text = txtInput.value.trim();
+      if (!text) return alert('名单内容不能为空！');
+      localStorage.setItem(GLOBAL_KEY, text);
+      modal.classList.remove('active');
+      const lines = text.split('\n').filter(l => l.trim()).length;
+      alert(`名单保存成功！共 ${lines} 位学生，全套 15 款点名样式已全部同步生效！`);
+    });
+
+    document.getElementById('btn-restore-default').addEventListener('click', () => {
+      if (confirm('确认恢复为默认 45 人名单吗？')) {
+        localStorage.removeItem(GLOBAL_KEY);
+        txtInput.value = DEFAULT_STUDENTS_RAW;
+        localStorage.setItem(GLOBAL_KEY, DEFAULT_STUDENTS_RAW);
+        modal.classList.remove('active');
+        alert('已成功恢复默认名单！');
+      }
+    });
+
+    const fileInput = document.getElementById('file-input');
+    document.getElementById('btn-import-txt').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        txtInput.value = evt.target.result;
+        alert(`已成功载入【${file.name}】，点击“保存并应用”即可生效！`);
+      };
+      reader.readAsText(file, 'utf-8');
+      fileInput.value = '';
+    });
+
+    document.getElementById('btn-export-txt').addEventListener('click', () => {
+      const text = txtInput.value || DEFAULT_STUDENTS_RAW;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '班级学生名单.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    });
+
+    loadList();
+  </script>
+</body>
+</html>

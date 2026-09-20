@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>太空发射控制中心 T-Minus 倒计时 - 离线全屏版</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    :root {
+      --bg: #07090e;
+      --panel: #0d121c;
+      --cyan: #00d2ff;
+      --orange: #ff7700;
+      --green: #00e676;
+      --red: #ff1744;
+      --text: #e0e6ed;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Consolas', monospace;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* 顶部航天指挥中枢标牌 */
+    .launch-header {
+      position: absolute;
+      top: 20px;
+      left: 30px;
+      right: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+      padding-bottom: 12px;
+      z-index: 20;
+    }
+    .back-btn {
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border: 1px solid rgba(0,210,255,0.3);
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(0,210,255,0.15);
+    }
+    .header-center {
+      text-align: center;
+    }
+    .header-center h1 {
+      font-size: 16px;
+      letter-spacing: 4px;
+      color: #fff;
+      font-weight: 700;
+    }
+    .mission-name {
+      font-size: 11px;
+      color: var(--orange);
+      letter-spacing: 2px;
+    }
+    .live-clock {
+      font-size: 13px;
+      font-family: monospace;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* 核心工作台网格 */
+    .mission-layout {
+      display: grid;
+      grid-template-columns: 260px 1fr 260px;
+      gap: 24px;
+      width: 94vw;
+      max-width: 1300px;
+      align-items: center;
+      z-index: 10;
+    }
+
+    /* 左右遥测侧板 */
+    .side-panel {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+    .panel-title {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      font-weight: bold;
+      border-bottom: 1px solid rgba(0,210,255,0.2);
+      padding-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .check-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #aaa;
+    }
+    .status-ok {
+      color: var(--green);
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .status-ok::before {
+      content: "●";
+      font-size: 8px;
+    }
+
+    /* 中央T-MINUS巨大倒计时面板 */
+    .main-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(13, 18, 28, 0.85);
+      border: 2px solid rgba(0, 210, 255, 0.3);
+      border-radius: 12px;
+      padding: 40px 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+    }
+    .t-label {
+      font-size: clamp(24px, 4vw, 42px);
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: var(--orange);
+      margin-bottom: 6px;
+    }
+    .countdown-digits {
+      font-size: clamp(54px, 11vw, 130px);
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 25px rgba(0, 210, 255, 0.5);
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .countdown-digits.igniting {
+      color: var(--orange);
+      text-shadow: 0 0 35px var(--orange);
+      animation: shake 0.1s infinite;
+    }
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      50% { transform: translate(-1px, -1px) rotate(0.2deg); }
+      100% { transform: translate(1px, -1px) rotate(-0.2deg); }
+    }
+
+    .mission-state-badge {
+      margin-top: 20px;
+      font-size: 13px;
+      letter-spacing: 3px;
+      padding: 6px 20px;
+      border-radius: 20px;
+      background: rgba(0, 230, 118, 0.15);
+      color: var(--green);
+      border: 1px solid var(--green);
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+
+    /* 升空背景火箭画布 */
+    #rocketCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* 底部指令操控台 */
+    .action-bar {
+      position: absolute;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(13, 18, 28, 0.9);
+      padding: 10px 24px;
+      border-radius: 30px;
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      z-index: 30;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      transition: opacity 0.3s;
+      max-width: 96vw;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .action-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .action-bar.autohide {
+      opacity: 0.15;
+    }
+    .action-bar:hover, .action-bar.autohide:hover {
+      opacity: 1;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid rgba(0, 210, 255, 0.4);
+      color: var(--cyan);
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: rgba(0, 210, 255, 0.2);
+      transform: scale(1.04);
+    }
+    button.launch-btn {
+      background: var(--orange);
+      color: #000;
+      border-color: var(--orange);
+    }
+    button.launch-btn:hover {
+      background: #ff8c1a;
+      box-shadow: 0 0 20px rgba(255, 119, 0, 0.6);
+    }
+
+    .preset-group {
+      display: flex;
+      gap: 6px;
+    }
+    .preset-btn {
+      padding: 4px 8px;
+      font-size: 11px;
+      border-color: rgba(255,255,255,0.2);
+      color: #bbb;
+    }
+
+    /* 升空全屏成功大横幅 */
+    .liftoff-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      font-size: clamp(40px, 9vw, 96px);
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 40px var(--orange), 0 0 80px var(--orange);
+      letter-spacing: 10px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 50;
+      transition: all 0.5s ease;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .liftoff-overlay.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .sub-liftoff {
+      font-size: clamp(16px, 2.5vw, 24px);
+      letter-spacing: 6px;
+      color: var(--cyan);
+      text-shadow: 0 0 15px var(--cyan);
+    }
+
+    /* 航天指挥台自定义倒计时弹窗 */
+    .space-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 120;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .space-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .space-modal-card {
+      background: var(--panel);
+      border: 1px solid var(--cyan);
+      box-shadow: 0 0 35px rgba(0, 210, 255, 0.3);
+      border-radius: 12px;
+      padding: 28px 36px;
+      width: 380px;
+      text-align: center;
+    }
+    .space-modal-title {
+      font-size: 15px;
+      color: var(--cyan);
+      letter-spacing: 2px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .space-input-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .space-input-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .space-input-col input {
+      width: 80px;
+      height: 48px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0, 210, 255, 0.4);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 24px;
+      font-family: 'Consolas', monospace;
+      text-align: center;
+      outline: none;
+    }
+    .space-input-col input:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 12px var(--orange);
+    }
+    .space-input-col span {
+      font-size: 11px;
+      color: #888;
+    }
+
+    /* 航天发射任务条 */
+    .space-task-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      background: rgba(0, 210, 255, 0.08);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      padding: 4px 14px;
+      border-radius: 4px;
+      transition: all 0.25s ease;
+    }
+    .space-task-bar:focus-within {
+      border-color: var(--orange);
+      box-shadow: 0 0 16px rgba(255, 119, 0, 0.4);
+      background: rgba(0, 210, 255, 0.14);
+    }
+    .space-task-tag {
+      font-size: 11px;
+      color: var(--orange);
+      letter-spacing: 2px;
+      font-weight: bold;
+      font-family: 'Consolas', monospace;
+    }
+    .space-task-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-family: 'Consolas', monospace;
+      font-size: clamp(12px, 1.5vw, 15px);
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-align: center;
+      min-width: 180px;
+      max-width: 320px;
+    }
+    .space-task-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+      font-weight: normal;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="rocketCanvas"></canvas>
+
+  <div class="launch-header">
+    <a href="../index.html" class="back-btn">← 大厅主页</a>
+    <div class="header-center">
+      <h1>KSC // MISSION LAUNCH CONTROL</h1>
+      <div class="mission-name">PROJECT ARES-IX · ORBITAL INSERTION</div>
+    </div>
+    <div class="live-clock" id="liveClock">UTC 00:00:00</div>
+  </div>
+
+  <div class="mission-layout">
+    <!-- 左遥测 -->
+    <div class="side-panel">
+      <div class="panel-title">SUBSYSTEM STATUS</div>
+      <div class="check-item"><span>主发动机航电设备</span><span class="status-ok">READY</span></div>
+      <div class="check-item"><span>低温液氧加注</span><span class="status-ok">99.8%</span></div>
+      <div class="check-item"><span>航天舱气密性</span><span class="status-ok">NOMINAL</span></div>
+      <div class="check-item"><span>射程雷达跟踪</span><span class="status-ok">LOCKED</span></div>
+      <div class="check-item"><span>气象放行许可</span><span class="status-ok">GO FOR LAUNCH</span></div>
+    </div>
+
+    <!-- 中央倒计时 -->
+    <div class="main-stage">
+      <div class="space-task-bar">
+        <span class="space-task-tag">🚀 MISSION //</span>
+        <input type="text" id="taskInput" class="space-task-input" placeholder="输入发射 / 攻坚任务..." maxlength="40" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="t-label" id="tLabel">T - MINUS</div>
+      <div class="countdown-digits" id="digits">00:10</div>
+      <div class="mission-state-badge" id="missionStatus">READY FOR COUNTDOWN</div>
+    </div>
+
+    <!-- 右遥测 -->
+    <div class="side-panel">
+      <div class="panel-title">TELEMETRY DATA</div>
+      <div class="check-item"><span>风速测算</span><span>1.4 M/S</span></div>
+      <div class="check-item"><span>发射台液压</span><span>320 BAR</span></div>
+      <div class="check-item"><span>推力矢量伺服</span><span>ACTIVE</span></div>
+      <div class="check-item"><span>逃逸塔安保</span><span>ARMED</span></div>
+      <div class="check-item"><span>最终指令授权</span><span class="status-ok">GO</span></div>
+    </div>
+  </div>
+
+  <!-- 升空全屏庆贺横幅 -->
+  <div class="liftoff-overlay" id="liftoffOverlay">
+    <div>LIFT OFF!</div>
+    <div class="sub-liftoff">点火升空 · 奔赴星辰大海</div>
+  </div>
+
+  <!-- 底部操作按钮 -->
+  <div class="action-bar" id="actionBar">
+    <button class="launch-btn" id="btnLaunch">🚀 点火发射 (Space)</button>
+    <button id="btnHold">✋ 中止/暂停 (H)</button>
+    <button id="btnReset">↺ 复位 (R)</button>
+
+    <div class="preset-group">
+      <button class="preset-btn" onclick="setCountdown(10)">10秒冲刺</button>
+      <button class="preset-btn" onclick="setCountdown(30)">30秒准备</button>
+      <button class="preset-btn" onclick="setCountdown(60)">1分钟就绪</button>
+      <button class="preset-btn" onclick="setCountdown(300)">5分钟发射</button>
+    </div>
+
+    <button id="btnCustom">⚙ 自定义</button>
+    <button id="btnSound">🔊 发射音效: 开</button>
+    <button id="btnFullscreen">⛶ 全屏 (F)</button>
+  </div>
+
+  <!-- 自定义发射倒计时弹窗 -->
+  <div class="space-modal-overlay" id="spaceModal">
+    <div class="space-modal-card">
+      <div class="space-modal-title">设定发射倒计时 (T-MINUS)</div>
+      <div class="space-input-row">
+        <div class="space-input-col">
+          <input type="number" id="spaceInputH" min="0" max="99" value="0">
+          <span>时</span>
+        </div>
+        <div class="space-input-col">
+          <input type="number" id="spaceInputM" min="0" max="59" value="0">
+          <span>分</span>
+        </div>
+        <div class="space-input-col">
+          <input type="number" id="spaceInputS" min="0" max="59" value="10">
+          <span>秒</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="launch-btn" id="btnApplySpace" style="padding: 8px 24px;">确认装订</button>
+        <button onclick="closeSpaceModal()" style="padding: 8px 18px;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================
+       纯离线 Web Audio 航天音效合成（倒计时Beep、火箭点火爆鸣、持续轰鸣）
+       ========================================================== */
+    class SpaceAudio {
+      constructor() {
+        this.ctx = null;
+        this.soundEnabled = true;
+        this.roarSource = null;
+        this.roarGain = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      // NASA经典的 10秒短促哔声
+      playCountBeep(isFinal) {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(isFinal ? 1200 : 800, now);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (isFinal ? 0.35 : 0.15));
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + (isFinal ? 0.36 : 0.16));
+      }
+      // 点火发射震撼低频轰鸣与爆燃声
+      startRocketRoar() {
+        if (!this.soundEnabled) return;
+        this.init();
+        if (!this.ctx || this.roarSource) return;
+
+        // 生成低频粉红爆破噪音
+        const bufferSize = this.ctx.sampleRate * 4;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          data[i] = (last + (0.05 * white)) / 1.05;
+          last = data[i];
+          data[i] *= 2.5;
+        }
+
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(150, this.ctx.currentTime);
+        filter.frequency.linearRampToValueAtTime(320, this.ctx.currentTime + 3);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.35, this.ctx.currentTime + 1.5);
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        source.start();
+        this.roarSource = source;
+        this.roarGain = gain;
+      }
+      stopRocketRoar() {
+        if (this.roarGain && this.ctx) {
+          this.roarGain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 1);
+          setTimeout(() => {
+            if (this.roarSource) {
+              this.roarSource.disconnect();
+              this.roarSource = null;
+            }
+          }, 1100);
+        }
+      }
+    }
+
+    const sound = new SpaceAudio();
+
+    /* ==========================================================
+       倒计时逻辑
+       ========================================================== */
+    let countdownSec = 10;
+    let initialSec = 10;
+    let isRunning = false;
+    let timerId = null;
+    let isLaunched = false;
+
+    const digits = document.getElementById('digits');
+    const tLabel = document.getElementById('tLabel');
+    const missionStatus = document.getElementById('missionStatus');
+    const btnLaunch = document.getElementById('btnLaunch');
+    const liftoffOverlay = document.getElementById('liftoffOverlay');
+
+    let hasHoursSet = false;
+
+    function formatTime(totalSec) {
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const pad2 = n => n < 10 ? '0' + n : n;
+      if (hasHoursSet || h > 0) {
+        return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+      }
+      return `${pad2(m)}:${pad2(s)}`;
+    }
+
+    function updateDisplay() {
+      digits.textContent = formatTime(countdownSec);
+      if (countdownSec <= 3 && countdownSec > 0 && isRunning) {
+        digits.classList.add('igniting');
+        missionStatus.textContent = 'MAIN ENGINE IGNITION';
+        missionStatus.style.borderColor = 'var(--orange)';
+        missionStatus.style.color = 'var(--orange)';
+        sound.startRocketRoar();
+      } else {
+        digits.classList.remove('igniting');
+      }
+    }
+
+    function startLaunch() {
+      sound.init();
+      if (countdownSec <= 0) {
+        setCountdown(initialSec, hasHoursSet);
+      }
+      isRunning = true;
+      btnLaunch.textContent = '⏸ 暂停 (Space)';
+      btnLaunch.classList.remove('launch-btn');
+      missionStatus.textContent = 'TERMINAL COUNT IN PROGRESS';
+
+      timerId = setInterval(() => {
+        if (countdownSec > 0) {
+          countdownSec--;
+          updateDisplay();
+          if (countdownSec <= 10 && countdownSec > 0) {
+            sound.playCountBeep(countdownSec === 1);
+          }
+        } else {
+          handleLiftoff();
+        }
+      }, 1000);
+    }
+
+    function pauseLaunch() {
+      isRunning = false;
+      clearInterval(timerId);
+      btnLaunch.textContent = '🚀 继续倒数 (Space)';
+      btnLaunch.classList.add('launch-btn');
+      missionStatus.textContent = 'HOLD HOLD HOLD';
+      sound.stopRocketRoar();
+    }
+
+    function toggleLaunch() {
+      if (isRunning) pauseLaunch();
+      else startLaunch();
+    }
+
+    function setCountdown(sec, hoursSet = false) {
+      pauseLaunch();
+      initialSec = sec;
+      countdownSec = sec;
+      hasHoursSet = hoursSet;
+      isLaunched = false;
+      liftoffOverlay.classList.remove('show');
+      digits.classList.remove('igniting');
+      tLabel.textContent = 'T - MINUS';
+      missionStatus.textContent = 'READY FOR COUNTDOWN';
+      missionStatus.style.borderColor = 'var(--green)';
+      missionStatus.style.color = 'var(--green)';
+      updateDisplay();
+    }
+
+    function handleLiftoff() {
+      pauseLaunch();
+      isLaunched = true;
+      tLabel.textContent = 'T + PLUS';
+      digits.textContent = '00:00';
+      missionStatus.textContent = 'LIFTOFF · VEHICLE HAS CLEARED THE TOWER';
+      liftoffOverlay.classList.add('show');
+      sound.playCountBeep(true);
+      sound.startRocketRoar();
+
+      // 启动火箭升空轨迹
+      rocketY = height * 0.7;
+      rocketVy = -1;
+    }
+
+    btnLaunch.addEventListener('click', toggleLaunch);
+    document.getElementById('btnHold').addEventListener('click', pauseLaunch);
+    document.getElementById('btnReset').addEventListener('click', () => setCountdown(initialSec));
+
+    /* ==========================================================
+       火箭喷焰与星空升空粒子动画
+       ========================================================== */
+    const canvas = document.getElementById('rocketCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let stars = [];
+    let fireParticles = [];
+    let rocketY = 0;
+    let rocketVy = 0;
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      stars = [];
+      for (let i = 0; i < 150; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: Math.random() * 2,
+          speed: Math.random() * 0.3 + 0.1
+        });
+      }
+      rocketY = height * 0.75;
+    }
+    window.addEventListener('resize', resize);
+
+    function drawScene() {
+      ctx.fillStyle = '#07090e';
+      ctx.fillRect(0, 0, width, height);
+
+      // 星空
+      ctx.fillStyle = '#ffffff';
+      stars.forEach(s => {
+        if (isLaunched) {
+          s.y += s.speed * 8; // 升空时光速下移
+        } else {
+          s.y += s.speed;
+        }
+        if (s.y > height) s.y = 0;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const rx = width / 2;
+
+      // 升空时火箭往上冲
+      if (isLaunched) {
+        rocketVy -= 0.15;
+        rocketY += rocketVy;
+        if (rocketY < -300) {
+          rocketY = -300; // 冲出屏幕
+        }
+
+        // 烈焰粒子
+        for (let i = 0; i < 15; i++) {
+          fireParticles.push({
+            x: rx + (Math.random() - 0.5) * 24,
+            y: rocketY + 80,
+            vx: (Math.random() - 0.5) * 8,
+            vy: Math.random() * 12 + 6,
+            radius: Math.random() * 20 + 8,
+            alpha: 1,
+            color: Math.random() > 0.3 ? '#ff6600' : '#ffea00'
+          });
+        }
+      } else if (countdownSec <= 3 && isRunning) {
+        // 点火预喷焰
+        for (let i = 0; i < 6; i++) {
+          fireParticles.push({
+            x: rx + (Math.random() - 0.5) * 30,
+            y: rocketY + 80,
+            vx: (Math.random() - 0.5) * 12,
+            vy: Math.random() * 4 + 2,
+            radius: Math.random() * 15 + 5,
+            alpha: 0.8,
+            color: '#ff4400'
+          });
+        }
+      }
+
+      // 绘制喷射火焰粒子
+      fireParticles.forEach((p, idx) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.02;
+        p.radius *= 0.96;
+        if (p.alpha <= 0) {
+          fireParticles.splice(idx, 1);
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // 绘制火箭本体轮廓（高科技剪影与航行灯）
+      if (rocketY > -250) {
+        ctx.save();
+        ctx.translate(rx, rocketY);
+
+        // 舱体
+        ctx.fillStyle = '#f0f3f6';
+        ctx.beginPath();
+        ctx.moveTo(0, -60); // 尖头
+        ctx.bezierCurveTo(18, -20, 20, 30, 20, 70);
+        ctx.lineTo(-20, 70);
+        ctx.bezierCurveTo(-20, 30, -18, -20, 0, -60);
+        ctx.fill();
+
+        // 尾翼
+        ctx.fillStyle = '#ff7700';
+        ctx.beginPath();
+        ctx.moveTo(-20, 45);
+        ctx.lineTo(-40, 75);
+        ctx.lineTo(-20, 70);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(20, 45);
+        ctx.lineTo(40, 75);
+        ctx.lineTo(20, 70);
+        ctx.fill();
+
+        // 舷窗
+        ctx.fillStyle = '#00d2ff';
+        ctx.beginPath();
+        ctx.arc(0, -15, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      requestAnimationFrame(drawScene);
+    }
+
+    resize();
+    drawScene();
+    updateDisplay();
+
+    // 实时UTC时间
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('liveClock').textContent = 'UTC ' +
+        now.toISOString().substring(11, 19);
+    }, 1000);
+
+    /* ==========================================================
+       全屏与按键控制
+       ========================================================== */
+    const btnFullscreen = document.getElementById('btnFullscreen');
+    function toggleFs() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    btnFullscreen.addEventListener('click', toggleFs);
+
+    document.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button, a, input, select, textarea, .space-modal-card')) return;
+      toggleFs();
+    });
+
+    const btnSound = document.getElementById('btnSound');
+    btnSound.addEventListener('click', () => {
+      sound.soundEnabled = !sound.soundEnabled;
+      btnSound.textContent = sound.soundEnabled ? '🔊 发射音效: 开' : '🔇 音效静音';
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.target.id === 'taskInput') {
+          if (e.key === 'Enter') e.target.blur();
+          return;
+        }
+        if (e.key === 'Enter') document.getElementById('btnApplySpace').click();
+        if (e.key === 'Escape') closeSpaceModal();
+        return;
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleLaunch();
+      } else if (e.key === 'h' || e.key === 'H') {
+        pauseLaunch();
+      } else if (e.key === 'r' || e.key === 'R') {
+        setCountdown(initialSec, hasHoursSet);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFs();
+      } else if (e.key === 'c' || e.key === 'C') {
+        openSpaceModal();
+      }
+    });
+
+    // 自定义任务名持久化与交互
+    const taskInput = document.getElementById('taskInput');
+    const savedTask = localStorage.getItem('countdown_task_name') || '';
+    if (savedTask) taskInput.value = savedTask;
+    taskInput.addEventListener('input', () => {
+      localStorage.setItem('countdown_task_name', taskInput.value);
+    });
+    taskInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') taskInput.blur();
+    });
+
+    // 自定义时长弹窗逻辑
+    const spaceModal = document.getElementById('spaceModal');
+    const spaceInputH = document.getElementById('spaceInputH');
+    const spaceInputM = document.getElementById('spaceInputM');
+    const spaceInputS = document.getElementById('spaceInputS');
+    const btnCustom = document.getElementById('btnCustom');
+
+    function openSpaceModal() {
+      const h = Math.floor(initialSec / 3600);
+      const m = Math.floor((initialSec % 3600) / 60);
+      const s = initialSec % 60;
+      spaceInputH.value = h;
+      spaceInputM.value = m;
+      spaceInputS.value = s;
+      spaceModal.classList.add('open');
+      spaceInputM.focus();
+    }
+    function closeSpaceModal() {
+      spaceModal.classList.remove('open');
+    }
+    if (btnCustom) {
+      btnCustom.addEventListener('click', openSpaceModal);
+    }
+    document.getElementById('btnApplySpace').addEventListener('click', () => {
+      const h = parseInt(spaceInputH.value, 10) || 0;
+      const m = parseInt(spaceInputM.value, 10) || 0;
+      const s = parseInt(spaceInputS.value, 10) || 0;
+      const total = h * 3600 + m * 60 + s;
+      if (total > 0) {
+        closeSpaceModal();
+        setCountdown(total, h > 0);
+        startLaunch();
+      }
+    });
+    spaceModal.addEventListener('click', (e) => {
+      if (e.target === spaceModal) closeSpaceModal();
+    });
+
+    const actionBar = document.getElementById('actionBar');
+    let actTimer = null;
+    window.addEventListener('mousemove', () => {
+      actionBar.classList.remove('autohide');
+      clearTimeout(actTimer);
+      actTimer = setTimeout(() => {
+        if (isRunning) actionBar.classList.add('autohide');
+      }, 3500);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>刮刮乐盲盒点名 - 趣味课堂随机点名</title>
+  <style>
+    :root {
+      --accent: #eab308;
+      --bg: radial-gradient(circle at center, #422006 0%, #09090b 100%);
+      --card-border: rgba(255, 255, 255, 0.16);
+      --text: #ffffff;
+      --text-dim: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; user-select: none; }
+    
+    /* 响应式大屏/白板/电脑全屏无缝适配 */
+    body {
+      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    
+    header {
+      height: clamp(46px, 6vh, 60px);
+      padding: 0 clamp(16px, 3vw, 36px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      z-index: 50;
+      flex-shrink: 0;
+    }
+    .brand { display: flex; align-items: center; gap: clamp(8px, 1.2vw, 14px); }
+    .brand-icon { font-size: clamp(20px, 2.5vw, 30px); }
+    .brand-title {
+      font-size: clamp(16px, 2vw, 24px);
+      font-weight: 900;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-badge {
+      font-size: clamp(10px, 1vw, 12px);
+      padding: 3px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+    
+    .header-actions { display: flex; gap: clamp(6px, 1vw, 12px); align-items: center; }
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: clamp(5px, 0.8vh, 8px) clamp(10px, 1.2vw, 16px);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: clamp(12px, 1.1vw, 14px);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+
+    .status-bar {
+      height: clamp(40px, 5vh, 50px);
+      padding: 0 clamp(16px, 3vw, 36px);
+      display: flex;
+      gap: clamp(12px, 2vw, 28px);
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.35);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: clamp(12px, 1.2vw, 15px);
+      color: var(--text-dim);
+      flex-shrink: 0;
+      z-index: 40;
+    }
+    .stat-val { color: var(--accent); font-weight: 800; font-size: 1.1em; }
+    .sel-count {
+      background: rgba(15, 23, 42, 0.85);
+      color: #fff;
+      border: 1.5px solid var(--accent);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: clamp(12px, 1.1vw, 14px);
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+    }
+
+    /* 主视台：充满屏幕高度与宽度，白板大屏自适应 */
+    main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: clamp(10px, 1.5vh, 24px) clamp(16px, 2vw, 40px);
+      position: relative;
+      z-index: 10;
+      overflow: hidden;
+    }
+
+    /* 启动按钮控制区 */
+    .control-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      z-index: 30;
+      margin-top: 10px;
+    }
+    .btn-main-action {
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      border: none;
+      color: #fff;
+      padding: clamp(10px, 1.8vh, 16px) clamp(40px, 5vw, 70px);
+      font-size: clamp(18px, 2.2vw, 26px);
+      font-weight: 900;
+      border-radius: 40px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.3);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-main-action:hover { transform: scale(1.05); filter: brightness(1.1); }
+    .btn-main-action:active { transform: scale(0.96); }
+    .btn-main-action.stop {
+      background: linear-gradient(135deg, #ef4444, #f97316);
+      box-shadow: 0 8px 30px rgba(239, 68, 68, 0.6);
+      animation: pulseStop 1.2s infinite;
+    }
+    @keyframes pulseStop { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+    .hint-keys {
+      font-size: clamp(11px, 1vw, 13px);
+      color: var(--text-dim);
+      display: flex;
+      gap: 14px;
+    }
+    .kbd {
+      background: rgba(255, 255, 255, 0.14);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #f1f5f9;
+      font-weight: 700;
+    }
+
+    /* 底部专属主题历史记录台 (宽敞舒适，大屏更霸气) */
+    .themed-history-bar {
+      height: clamp(64px, 10vh, 100px);
+      padding: 0 clamp(16px, 3vw, 36px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-shrink: 0;
+      z-index: 40;
+      box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .history-title-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: clamp(13px, 1.3vw, 16px);
+      font-weight: 800;
+      white-space: nowrap;
+      padding: 6px 14px;
+      border-radius: 8px;
+    }
+    .themed-history-track {
+      flex: 1;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      align-items: center;
+      padding: 6px 0;
+      scrollbar-width: thin;
+    }
+    .themed-item-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: clamp(13px, 1.2vw, 15px);
+      font-weight: 800;
+      white-space: nowrap;
+      animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+
+    /* 弹窗遮罩 */
+    .modal-backdrop {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(10px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal {
+      background: #0f172a;
+      border: 1.5px solid var(--card-border);
+      border-radius: 20px;
+      width: 100%;
+      max-width: 620px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 14px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; }
+    .modal-title { font-size: 18px; font-weight: 800; color: #fff; }
+    .modal-close { background: none; border: none; color: #94a3b8; font-size: 24px; cursor: pointer; }
+    .modal textarea {
+      width: 100%; height: 210px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      color: #fff;
+      padding: 12px;
+      font-size: 14px;
+      font-family: monospace;
+      outline: none;
+      resize: vertical;
+    }
+    .modal-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--card-border); padding-top: 12px; }
+    .btn-sub { background: rgba(255, 255, 255, 0.1); border: 1px solid var(--card-border); color: #fff; padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #4f46e5); border: none; color: #fff; font-weight: 800; padding: 7px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+
+    #fx-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 100; }
+    .screen-shake { animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(3px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-5px, 0, 0); } 40%, 60% { transform: translate3d(5px, 0, 0); } }
+
+    /* 针对6位学号的自适应布局 */
+    .id-tag {
+      font-family: 'SF Mono', Consolas, Menlo, monospace;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    
+    .scratch-stage {
+      width: 100%;
+      max-width: 1100px;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(10px, 1.5vh, 18px);
+    }
+    .scratch-grid {
+      display: grid;
+      gap: clamp(14px, 2vw, 24px);
+      width: 100%;
+      justify-content: center;
+      align-content: center;
+    }
+    .s-grid-1 { grid-template-columns: 1fr; max-width: 540px; }
+    .s-grid-2 { grid-template-columns: 1fr 1fr; max-width: 880px; }
+    .s-grid-3 { grid-template-columns: repeat(3, 1fr); max-width: 1100px; }
+    .s-grid-4 { grid-template-columns: repeat(2, 1fr); max-width: 760px; }
+    .s-grid-5 { grid-template-columns: repeat(3, 1fr); max-width: 1050px; }
+    .s-grid-6 { grid-template-columns: repeat(3, 1fr); max-width: 1050px; }
+
+    .scratch-card-box {
+      position: relative;
+      border-radius: clamp(16px, 2vw, 24px);
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+      border: 4px solid #facc15;
+      background: #0f172a;
+    }
+    .s-grid-1 .scratch-card-box { height: clamp(250px, 38vh, 370px); }
+    .s-grid-2 .scratch-card-box { height: clamp(220px, 32vh, 320px); }
+    .s-grid-3 .scratch-card-box { height: clamp(190px, 28vh, 270px); }
+    .s-grid-4 .scratch-card-box, .s-grid-5 .scratch-card-box, .s-grid-6 .scratch-card-box { height: clamp(145px, 21vh, 205px); }
+
+    /* 底层中奖内容：超高对比度，金红辉映，大字清晰醒目 */
+    .scratch-underlayer {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(10px, 1.5vh, 20px);
+      text-align: center;
+      background: radial-gradient(circle at center, #ffffff 0%, #fef08a 45%, #f59e0b 100%);
+      color: #0f172a;
+      z-index: 1;
+    }
+    .su-badge {
+      font-size: clamp(11px, 1.1vw, 14px);
+      font-weight: 900;
+      color: #ffffff;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      padding: 3px 14px;
+      border-radius: 14px;
+      margin-bottom: 6px;
+      box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+      letter-spacing: 1px;
+    }
+    .su-id {
+      font-size: clamp(15px, 1.6vw, 22px);
+      font-weight: 900;
+      color: #b45309;
+      margin-bottom: 2px;
+      letter-spacing: 1px;
+    }
+    .su-name {
+      font-size: clamp(32px, 5.2vw, 68px);
+      font-weight: 900;
+      color: #0f172a;
+      text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+      letter-spacing: 2px;
+      line-height: 1.1;
+    }
+    .su-foot {
+      font-size: clamp(10px, 1vw, 12px);
+      font-weight: 800;
+      color: #92400e;
+      margin-top: 6px;
+    }
+
+    /* 顶层拟真银涂层 Canvas (支持平滑连续笔触涂抹) */
+    .scratch-cover-canvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      cursor: crosshair;
+      z-index: 10;
+      touch-action: none;
+      transition: opacity 0.5s ease-out;
+    }
+    .scratch-cover-canvas.cleared {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .scratch-tools-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn-quick-scratch {
+      background: linear-gradient(135deg, #eab308, #ca8a04);
+      border: 2px solid #fef08a;
+      color: #000;
+      padding: 7px 22px;
+      border-radius: 20px;
+      font-size: clamp(13px, 1.2vw, 15px);
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(234, 179, 8, 0.4);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-quick-scratch:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 6px 20px rgba(234, 179, 8, 0.65);
+    }
+  
+  </style>
+</head>
+<body>
+  <canvas id="fx-canvas"></canvas>
+
+  <header>
+    <div class="brand">
+      <span class="brand-icon">🪙</span>
+      <span class="brand-title">刮刮乐盲盒点名</span>
+      <span class="brand-badge">刮刮金券版</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon" id="btn-bgm">🎵 氛围音: 开</button>
+      <button class="btn-icon" id="btn-sound">🔊 音效: 开</button>
+      <button class="btn-icon" id="btn-manage">📝 名单管理</button>
+      <button class="btn-icon" id="btn-fullscreen">⛶ 全屏</button>
+    </div>
+  </header>
+
+  <div class="status-bar">
+    <div>全班: <span class="stat-val" id="stat-total">0</span> 人</div>
+    <div>待抽: <span class="stat-val" id="stat-remain">0</span> 人</div>
+    <div>已抽: <span class="stat-val" id="stat-called">0</span> 人</div>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+      <input type="checkbox" id="chk-norepeat" checked style="accent-color:var(--accent);transform:scale(1.15);">
+      <span style="font-weight:700;">不重复抽取</span>
+    </label>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span>每次抽取:</span>
+      <select id="sel-count" class="sel-count">
+        <option value="1" selected>1 人</option>
+        <option value="2">2 人</option>
+        <option value="3">3 人</option>
+        <option value="4">4 人</option>
+        <option value="5">5 人</option>
+        <option value="6">6 人</option>
+      </select>
+    </div>
+  </div>
+
+  <main>
+    
+    <div class="scratch-stage">
+      <div class="scratch-tools-bar">
+        <span style="font-size:clamp(13px, 1.3vw, 15px);color:#fef08a;font-weight:800;">
+          🪙 停下后在银色涂层上【按住鼠标】或【用手指】直接刮开，即可揭晓结果！
+        </span>
+        <button class="btn-quick-scratch" id="btn-reveal-all">✨ 一键刮开全部</button>
+      </div>
+      <div class="scratch-grid s-grid-1" id="scratch-deck">
+        <div class="scratch-card-box">
+          <div class="scratch-underlayer">
+            <div class="su-badge">★ 幸运特等奖 ★</div>
+            <div class="su-id id-tag">202401</div>
+            <div class="su-name">等待刮开</div>
+            <div class="su-foot">✦ CLASSROOM LUCKY LOTTERY ✦</div>
+          </div>
+          <canvas class="scratch-cover-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  
+
+    <div class="control-panel">
+      <button class="btn-main-action" id="btn-start">
+        <span id="btn-icon">▶</span>
+        <span id="btn-text">开始点名</span>
+      </button>
+      <div class="hint-keys">
+        <span>按 <span class="kbd">空格 Space</span> 开始/停止</span>
+        <span>按 <span class="kbd">F</span> 全屏</span>
+        <span>按 <span class="kbd">R</span> 重置轮次</span>
+      </div>
+    </div>
+  </main>
+
+  
+    <div class="themed-history-bar" style="border-top:1.5px solid rgba(234,179,8,0.35);background:rgba(25,20,5,0.85);color:#fef08a;">
+      <div class="history-title-box" style="background:rgba(234,179,8,0.2);border:1px solid rgba(234,179,8,0.5);color:#fef08a;">
+        <span>🎫</span><span>今日中奖刮刮乐专栏</span>
+      </div>
+      <div class="themed-history-track" id="themed-history-list"></div>
+    </div>
+  
+
+  <!-- 名单设置弹窗 -->
+  <div class="modal-backdrop" id="modal-manage">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 class="modal-title">📝 班级学生名单设置</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <p style="font-size:13px;color:var(--text-dim);line-height:1.5;">
+        格式：<b>学号 姓名</b>（例如：<code>202401 张三</code>，每行一个）。<br>
+        在这里修改保存后，全套点名系统会自动同步生效！
+      </p>
+      <textarea id="txt-input"></textarea>
+      <div class="modal-foot">
+        <div style="display:flex;gap:8px;">
+          <input type="file" id="file-input" accept=".txt" style="display:none;">
+          <button class="btn-sub" id="btn-import-txt">📂 导入 .txt</button>
+          <button class="btn-sub" id="btn-export-txt">💾 导出 .txt</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sub" id="btn-restore-default">恢复默认</button>
+          <button class="btn-primary" id="btn-save-list">保存并应用</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DEFAULT_STUDENTS_RAW = `202401 陈晨
+202402 林子轩
+202403 王梓涵
+202404 李雨欣
+202405 张天宇
+202406 刘思齐
+202407 黄俊杰
+202408 杨博文
+202409 赵嘉欣
+202410 周子豪
+202411 吴佳琪
+202412 孙宇涵
+202413 徐浩然
+202414 朱梦瑶
+202415 郭宇轩
+202416 何语嫣
+202417 高若萱
+202418 罗博宇
+202419 郑泽宇
+202420 梁欣怡
+202421 谢梓桐
+202422 宋雨泽
+202423 唐子默
+202424 许博涵
+202425 韩雪儿
+202426 冯天逸
+202427 邓子墨
+202428 曹雨菲
+202429 彭子轩
+202430 曾俊杰
+202431 萧雅涵
+202432 田浩宇
+202433 董思源
+202434 袁梦洁
+202435 潘宇恒
+202436 于心怡
+202437 蒋明远
+202438 蔡雨桐
+202439 余泽楷
+202440 杜佳慧
+202441 叶子凡
+202442 程思琪
+202443 苏晨辉
+202444 魏梓琪
+202445 薛子轩`;
+    const GLOBAL_KEY = 'CLASSROOM_ROLLCALL_STUDENTS_GLOBAL';
+
+    
+const SoundFX = (function() {
+  let ctx = null, bgmPlaying = false, muted = false, step = 0, timerId = null, currentTempo = 118;
+  function getCtx() {
+    if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) ctx = new AC(); }
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  let noiseBuf = null;
+  function getNoise(c) {
+    if (!noiseBuf) {
+      const len = c.sampleRate * 0.5, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      noiseBuf = b;
+    }
+    return noiseBuf;
+  }
+  function playKick(t, vol = 0.22) {
+    const c = getCtx(); if (!c || muted) return;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(36, t + 0.12);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.connect(g); g.connect(c.destination); osc.start(t); osc.stop(t + 0.13);
+  }
+  function playSnare(t, vol = 0.12) {
+    const c = getCtx(); if (!c || muted) return;
+    const n = c.createBufferSource(); n.buffer = getNoise(c);
+    const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.setValueAtTime(950, t);
+    const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    n.connect(f); f.connect(g); g.connect(c.destination); n.start(t); n.stop(t + 0.12);
+  }
+  function playHat(t, vol = 0.05) {
+    const c = getCtx(); if (!c || muted) return;
+    const n = c.createBufferSource(); n.buffer = getNoise(c);
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(8000, t);
+    const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+    n.connect(f); f.connect(g); g.connect(c.destination); n.start(t); n.stop(t + 0.045);
+  }
+  function playNote(freq, t, dur = 0.14, vol = 0.07) {
+    const c = getCtx(); if (!c || muted) return;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(g); g.connect(c.destination); osc.start(t); osc.stop(t + dur + 0.02);
+  }
+  function playBass(freq, t, dur = 0.16, vol = 0.13) {
+    const c = getCtx(); if (!c || muted) return;
+    const osc = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, t);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(320, t);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(f); f.connect(g); g.connect(c.destination); osc.start(t); osc.stop(t + dur + 0.02);
+  }
+  const bassSeq = [130.81, 130.81, 164.81, 174.61, 196.00, 196.00, 174.61, 146.83];
+  const melSeq = [523.25, 0, 659.25, 783.99, 0, 1046.5, 783.99, 0, 659.25, 783.99, 0, 880.00, 783.99, 0, 659.25, 587.33];
+
+  function scheduler() {
+    const c = getCtx(); if (!c) return;
+    const now = c.currentTime;
+    const s = step % 16;
+    if (s % 4 === 0) playKick(now, 0.18);
+    if (s % 4 === 2) playSnare(now, 0.1);
+    playHat(now, 0.04);
+
+    const b = bassSeq[Math.floor(s / 2)];
+    if (s % 2 === 0 && b) playBass(b, now, (60/currentTempo/2)*1.4, 0.12);
+    const m = melSeq[s];
+    if (m) playNote(m, now, (60/currentTempo/2)*1.1, 0.06);
+    step++;
+  }
+
+  function startBGM() {
+    if (bgmPlaying || muted) return;
+    getCtx(); bgmPlaying = true; currentTempo = 118;
+    timerId = setInterval(scheduler, (60 / currentTempo / 2) * 1000);
+  }
+  function stopBGM() {
+    bgmPlaying = false;
+    if (timerId) { clearInterval(timerId); timerId = null; }
+  }
+  function setFast(fast = true) {
+    if (!bgmPlaying) return;
+    clearInterval(timerId);
+    currentTempo = fast ? 165 : 118;
+    timerId = setInterval(scheduler, (60 / currentTempo / 2) * 1000);
+  }
+
+  function playRollTick() {
+    const c = getCtx(); if (!c || muted) return;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(450 + Math.random() * 250, c.currentTime);
+    g.gain.setValueAtTime(0.09, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.035);
+    osc.connect(g); g.connect(c.destination);
+    osc.start(); osc.stop(c.currentTime + 0.04);
+  }
+
+  function playWin() {
+    const c = getCtx(); if (!c || muted) return;
+    playKick(c.currentTime, 0.35);
+    const n = c.createBufferSource(); n.buffer = getNoise(c);
+    const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.setValueAtTime(3000, c.currentTime);
+    const gN = c.createGain(); gN.gain.setValueAtTime(0.2, c.currentTime); gN.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.4);
+    n.connect(f); f.connect(gN); gN.connect(c.destination); n.start(); n.stop(c.currentTime + 0.42);
+
+    const chords = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+    chords.forEach((freq, idx) => {
+      const osc = c.createOscillator(), g = c.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, c.currentTime + idx * 0.04);
+      g.gain.setValueAtTime(0.12, c.currentTime + idx * 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + idx * 0.04 + 0.6);
+      osc.connect(g); g.connect(c.destination);
+      osc.start(c.currentTime + idx * 0.04);
+      osc.stop(c.currentTime + idx * 0.04 + 0.65);
+    });
+  }
+
+  function initAutoPlay() {
+    const trigger = () => {
+      if (!muted && !bgmPlaying) startBGM();
+      window.removeEventListener('pointerdown', trigger);
+      window.removeEventListener('keydown', trigger);
+    };
+    window.addEventListener('pointerdown', trigger);
+    window.addEventListener('keydown', trigger);
+  }
+
+  return {
+    startBGM, stopBGM, setFast, playRollTick, playWin, initAutoPlay,
+    toggleBGM: () => { if (bgmPlaying) { stopBGM(); return false; } else { startBGM(); return true; } },
+    toggleMute: () => { muted = !muted; if (muted) stopBGM(); else startBGM(); return muted; },
+    isMuted: () => muted, isPlaying: () => bgmPlaying
+  };
+})();
+
+
+    // 粒子礼花与震动
+    const FX = (function() {
+      const c = document.getElementById('fx-canvas'), ctx = c.getContext('2d');
+      let p = [], aId = null;
+      function resize() { c.width = window.innerWidth; c.height = window.innerHeight; }
+      window.addEventListener('resize', resize); resize();
+      function blast() {
+        p = [];
+        const clrs = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#fde047', '#ffffff'];
+        for (let i = 0; i < 110; i++) {
+          p.push({
+            x: c.width/2, y: c.height*0.42,
+            w: Math.random()*14+8, h: Math.random()*10+5,
+            color: clrs[Math.floor(Math.random()*clrs.length)],
+            vx: (Math.random()-0.5)*30, vy: (Math.random()-0.75)*26-6,
+            rot: Math.random()*360, vrot: (Math.random()-0.5)*18,
+            g: 0.42, op: 1
+          });
+        }
+        document.body.classList.add('screen-shake');
+        setTimeout(() => document.body.classList.remove('screen-shake'), 400);
+        if (!aId) anim();
+      }
+      function anim() {
+        ctx.clearRect(0, 0, c.width, c.height);
+        for (let i = 0; i < p.length; i++) {
+          const item = p[i]; item.x += item.vx; item.y += item.vy; item.vy += item.g; item.rot += item.vrot; item.op -= 0.011;
+          ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(item.rot * Math.PI / 180);
+          ctx.fillStyle = item.color; ctx.globalAlpha = Math.max(0, item.op);
+          ctx.fillRect(-item.w/2, -item.h/2, item.w, item.h); ctx.restore();
+        }
+        p = p.filter(x => x.op > 0 && x.y < c.height + 50);
+        if (p.length > 0) aId = requestAnimationFrame(anim);
+        else { aId = null; ctx.clearRect(0,0,c.width,c.height); }
+      }
+      return { blast };
+    })();
+
+    // 数据状态管理
+    let studentList = [], remainPool = [], historyList = [];
+    let isRolling = false;
+
+    function parseText(t) {
+      if (!t || !t.trim()) return [];
+      return t.split('\n').map((l, idx) => {
+        const tr = l.trim(); if (!tr) return null;
+        const pts = tr.split(/[\s,，\t]+/);
+        return pts.length >= 2 ? { id: pts[0], name: pts.slice(1).join(' ') } : { id: (idx+1 < 10 ? '0' : '') + (idx+1), name: pts[0] };
+      }).filter(Boolean);
+    }
+    function formatText(list) { return list.map(s => s.id + ' ' + s.name).join('\n'); }
+
+    function loadStudents() {
+      const saved = localStorage.getItem(GLOBAL_KEY);
+      studentList = (saved && saved.trim()) ? parseText(saved) : parseText(DEFAULT_STUDENTS_RAW);
+      resetPool();
+    }
+    function resetPool() {
+      remainPool = [...studentList]; historyList = [];
+      updateStats();
+      const track = document.getElementById('themed-history-list');
+      if (track) track.innerHTML = '';
+      if (typeof onResetHook === 'function') onResetHook();
+    }
+    function updateStats() {
+      document.getElementById('stat-total').textContent = studentList.length;
+      document.getElementById('stat-remain').textContent = remainPool.length;
+      document.getElementById('stat-called').textContent = historyList.length;
+    }
+
+    function getSelectedCount() {
+      return Math.max(1, Math.min(6, parseInt(document.getElementById('sel-count').value) || 1));
+    }
+
+    function pickRandomWinners() {
+      const isNoRepeat = document.getElementById('chk-norepeat').checked;
+      let pool = isNoRepeat ? remainPool : studentList;
+      if (pool.length === 0) {
+        alert('本轮所有同学都已点过一遍啦！将自动重置名单开启新一轮！');
+        resetPool();
+        pool = isNoRepeat ? remainPool : studentList;
+      }
+      const count = Math.min(getSelectedCount(), pool.length);
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      const chosen = shuffled.slice(0, count);
+
+      if (isNoRepeat) {
+        chosen.forEach(c => {
+          const idx = remainPool.findIndex(s => s.id === c.id && s.name === c.name);
+          if (idx !== -1) remainPool.splice(idx, 1);
+          historyList.push(c);
+        });
+      } else {
+        chosen.forEach(c => historyList.push(c));
+      }
+      updateStats();
+      return chosen;
+    }
+
+    // 核心开始/停止控制
+    const btnStart = document.getElementById('btn-start');
+    const btnIcon = document.getElementById('btn-icon');
+    const btnText = document.getElementById('btn-text');
+
+    function toggleRoll() {
+      if (!isRolling) {
+        startRolling();
+      } else {
+        stopRolling();
+      }
+    }
+
+    // 确保按钮点击100%响应！
+    btnStart.addEventListener('click', toggleRoll);
+
+    function startRolling() {
+      if (studentList.length === 0) return alert('请先在右上角【名单管理】添加学生！');
+      isRolling = true;
+      btnStart.classList.add('stop');
+      btnIcon.textContent = '⏹';
+      btnText.textContent = '停止点名';
+      SoundFX.setFast(true);
+      if (typeof stageStartRoll === 'function') stageStartRoll();
+    }
+
+    function stopRolling() {
+      isRolling = false;
+      btnStart.classList.remove('stop');
+      btnIcon.textContent = '▶';
+      btnText.textContent = '开始点名';
+      SoundFX.setFast(false);
+
+      const winners = pickRandomWinners();
+      if (typeof stageStopRoll === 'function') stageStopRoll(winners);
+
+      SoundFX.playWin();
+      FX.blast();
+      if (typeof updateThemedHistory === 'function') updateThemedHistory(winners);
+    }
+
+    // 快捷键支持
+    window.addEventListener('keydown', (e) => {
+      if (document.getElementById('modal-manage').classList.contains('active')) return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleRoll();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === 'r' || e.key === 'R') {
+        if (confirm('确认重置本轮名单记录吗？')) resetPool();
+      }
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+      else if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    }
+    document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
+
+    // 声音按钮
+    document.getElementById('btn-bgm').addEventListener('click', () => {
+      const state = SoundFX.toggleBGM();
+      document.getElementById('btn-bgm').textContent = state ? '🎵 氛围音: 开' : '🎵 氛围音: 关';
+    });
+    document.getElementById('btn-sound').addEventListener('click', () => {
+      const m = SoundFX.toggleMute();
+      document.getElementById('btn-sound').textContent = m ? '🔇 音效: 关' : '🔊 音效: 开';
+      document.getElementById('btn-bgm').textContent = (!m && SoundFX.isPlaying()) ? '🎵 氛围音: 开' : '🎵 氛围音: 关';
+    });
+
+    // 名单设置弹窗交互
+    const modal = document.getElementById('modal-manage');
+    const txtInput = document.getElementById('txt-input');
+    document.getElementById('btn-manage').addEventListener('click', () => {
+      txtInput.value = formatText(studentList);
+      modal.classList.add('active');
+    });
+    document.getElementById('modal-close').addEventListener('click', () => modal.classList.remove('active'));
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+    document.getElementById('btn-save-list').addEventListener('click', () => {
+      const text = txtInput.value.trim();
+      if (!text) return alert('名单内容不能为空！');
+      localStorage.setItem(GLOBAL_KEY, text);
+      studentList = parseText(text);
+      resetPool();
+      modal.classList.remove('active');
+      alert(`保存成功！共 ${studentList.length} 位同学，整套点名系统已全自动同步生效！`);
+    });
+
+    document.getElementById('btn-restore-default').addEventListener('click', () => {
+      if (confirm('确认恢复默认名单吗？')) {
+        localStorage.removeItem(GLOBAL_KEY);
+        studentList = parseText(DEFAULT_STUDENTS_RAW);
+        localStorage.setItem(GLOBAL_KEY, DEFAULT_STUDENTS_RAW);
+        resetPool();
+        modal.classList.remove('active');
+        alert('已恢复为默认45人名单！');
+      }
+    });
+
+    const fileInput = document.getElementById('file-input');
+    document.getElementById('btn-import-txt').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        txtInput.value = evt.target.result;
+        alert(`已成功载入【${file.name}】，点击“保存并应用”即可生效！`);
+      };
+      reader.readAsText(file, 'utf-8');
+      fileInput.value = '';
+    });
+
+    document.getElementById('btn-export-txt').addEventListener('click', () => {
+      const text = txtInput.value || formatText(studentList);
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = '班级学生名单.txt';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    });
+
+    // 默认自动开启背景音乐
+    SoundFX.initAutoPlay();
+
+    
+    const deck = document.getElementById('scratch-deck');
+    const btnRevealAll = document.getElementById('btn-reveal-all');
+    let scratchTimer = null;
+
+    function renderScratchCards(students, isRollPhase = false) {
+      const n = students.length;
+      deck.className = 'scratch-grid s-grid-' + n;
+      deck.innerHTML = '';
+
+      students.forEach((stu, idx) => {
+        const box = document.createElement('div');
+        box.className = 'scratch-card-box';
+        box.innerHTML = `
+          <div class="scratch-underlayer">
+            <div class="su-badge">★ 幸运特等奖 · 课堂之星 ★</div>
+            <div class="su-id id-tag">No.${stu.id}</div>
+            <div class="su-name">${stu.name}</div>
+            <div class="su-foot">✦ 官方认证 · 课堂锦鲤 ✦</div>
+          </div>
+          <canvas class="scratch-cover-canvas" id="sc-${idx}"></canvas>
+        `;
+        deck.appendChild(box);
+
+        // 如果是停止后的抽奖结果，赋予银色刮层
+        initCanvasScratch('sc-' + idx, isRollPhase);
+      });
+    }
+
+    function initCanvasScratch(canvasId, isRollPhase) {
+      // 延时确保 DOM 布局已定形
+      requestAnimationFrame(() => {
+        const c = document.getElementById(canvasId);
+        if (!c) return;
+        const rect = c.getBoundingClientRect();
+        c.width = rect.width || 400;
+        c.height = rect.height || 260;
+        const ctx = c.getContext('2d');
+
+        if (isRollPhase) {
+          // 摇号滚动中：快速显示半透明提示
+          ctx.fillStyle = 'rgba(100, 116, 139, 0.9)';
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚡ 正在生成刮刮乐彩票...', c.width / 2, c.height / 2 + 6);
+          return;
+        }
+
+        // 停止揭晓：绘制精美的银色金属质感防伪涂层
+        const grad = ctx.createLinearGradient(0, 0, c.width, c.height);
+        grad.addColorStop(0, '#94a3b8');
+        grad.addColorStop(0.2, '#e2e8f0');
+        grad.addColorStop(0.5, '#cbd5e1');
+        grad.addColorStop(0.8, '#94a3b8');
+        grad.addColorStop(1, '#64748b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        // 绘制防伪几何纹理
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        for (let x = 10; x < c.width; x += 30) {
+          for (let y = 10; y < c.height; y += 30) {
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // 刮奖区花纹边框与醒目提示字
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(12, 12, c.width - 24, c.height - 24);
+
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold ' + Math.max(16, Math.round(c.width * 0.045)) + 'px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#fff';
+        ctx.shadowBlur = 2;
+        ctx.fillText('🪙 刮开此处揭晓幸运同学 🪙', c.width / 2, c.height / 2 - 8);
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('用鼠标涂抹或手指按住擦除', c.width / 2, c.height / 2 + 18);
+        ctx.shadowBlur = 0;
+
+        // 绑定连续平滑刮擦交互 (抗锯齿连续粗线条)
+        let isDrawing = false, lastX = null, lastY = null;
+        let totalPixels = c.width * c.height, scratchedCount = 0;
+
+        function getPos(e) {
+          const r = c.getBoundingClientRect();
+          const scaleX = c.width / r.width;
+          const scaleY = c.height / r.height;
+          return {
+            x: (e.clientX - r.left) * scaleX,
+            y: (e.clientY - r.top) * scaleY
+          };
+        }
+
+        function scratchTo(currX, currY) {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.beginPath();
+          if (lastX === null) {
+            ctx.arc(currX, currY, 32, 0, Math.PI * 2);
+          } else {
+            ctx.lineWidth = 64; // 超宽笔刷，一擦一大片，手感极佳
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currX, currY);
+          }
+          ctx.stroke();
+          ctx.fill();
+
+          SoundFX.playRollTick();
+          lastX = currX;
+          lastY = currY;
+          scratchedCount++;
+
+          // 刮开面积超过一定比例时，自动全部消隐，顺畅彻底呈现结果
+          if (scratchedCount > 18) {
+            c.classList.add('cleared');
+          }
+        }
+
+        c.addEventListener('pointerdown', (e) => {
+          isDrawing = true;
+          const pos = getPos(e);
+          lastX = pos.x;
+          lastY = pos.y;
+          scratchTo(pos.x, pos.y);
+        });
+
+        c.addEventListener('pointermove', (e) => {
+          if (!isDrawing) return;
+          const pos = getPos(e);
+          scratchTo(pos.x, pos.y);
+        });
+
+        const stopDraw = () => { isDrawing = false; lastX = null; lastY = null; };
+        window.addEventListener('pointerup', stopDraw);
+        window.addEventListener('pointercancel', stopDraw);
+      });
+    }
+
+    btnRevealAll.addEventListener('click', () => {
+      const canvases = deck.querySelectorAll('.scratch-cover-canvas');
+      canvases.forEach(c => {
+        c.classList.add('cleared');
+      });
+      SoundFX.playWin();
+      FX.blast();
+    });
+
+    document.getElementById('sel-count').addEventListener('change', () => {
+      const mock = Array.from({length: getSelectedCount()}, (_, i) => ({ id: '20240' + (i+1), name: '准备就绪' }));
+      renderScratchCards(mock, false);
+    });
+
+    function stageStartRoll() {
+      const n = getSelectedCount();
+      scratchTimer = setInterval(() => {
+        const temp = [];
+        for (let i = 0; i < n; i++) temp.push(studentList[Math.floor(Math.random() * studentList.length)]);
+        renderScratchCards(temp, true);
+        SoundFX.playRollTick();
+      }, 70);
+    }
+
+    function stageStopRoll(winners) {
+      clearInterval(scratchTimer);
+      renderScratchCards(winners, false);
+    }
+
+    setTimeout(() => {
+      const mock = Array.from({length: getSelectedCount()}, (_, i) => ({ id: '20240' + (i+1), name: '等待刮开' }));
+      renderScratchCards(mock, false);
+    }, 120);
+  
+    
+    function updateThemedHistory(winners) {
+      const track = document.getElementById('themed-history-list');
+      if (!track) return;
+      winners.forEach(w => {
+        const pill = document.createElement('div');
+        pill.className = 'themed-item-pill';
+        pill.style.background = 'rgba(234, 179, 8, 0.2)';
+        pill.style.border = '1px solid rgba(234, 179, 8, 0.5)';
+        pill.style.color = '#fef08a';
+        pill.innerHTML = `<span>🎫 特等奖</span><span class="id-tag">${w.id}</span> <b>${w.name}</b>`;
+        track.prepend(pill);
+      });
+    }
+  
+
+    loadStudents();
+  </script>
+</body>
+</html>
