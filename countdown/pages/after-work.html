@@ -281,40 +281,42 @@
     .work-task-bar {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 20px;
-      padding: 5px 16px;
-      backdrop-filter: blur(8px);
+      gap: 12px;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(0, 240, 255, 0.35);
+      border-radius: 30px;
+      padding: 8px 24px;
+      backdrop-filter: blur(10px);
       transition: all 0.25s ease;
     }
     .work-task-bar:focus-within {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.14);
       border-color: var(--primary);
-      box-shadow: 0 0 16px rgba(0, 240, 255, 0.25);
+      box-shadow: 0 0 22px rgba(0, 240, 255, 0.4);
     }
     .work-task-tag {
-      font-size: 12px;
+      font-size: clamp(13px, 1.5vw, 16px);
       color: var(--primary);
-      font-weight: bold;
+      font-weight: 800;
+      white-space: nowrap;
     }
     .work-task-input {
       background: transparent;
       border: none;
       outline: none;
       color: var(--text);
-      font-size: 14px;
-      font-weight: 500;
+      font-size: clamp(17px, 2.2vw, 26px);
+      font-weight: 700;
       text-align: center;
-      min-width: 180px;
-      max-width: 320px;
+      min-width: 240px;
+      max-width: 480px;
       font-family: inherit;
     }
     .work-task-input::placeholder {
       color: var(--subtext);
       font-weight: normal;
+      font-size: clamp(14px, 1.8vw, 20px);
     }
   </style>
 </head>

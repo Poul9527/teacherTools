@@ -134,25 +134,26 @@
     .cyber-task-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
-      background: rgba(0, 240, 255, 0.06);
-      border: 1px solid rgba(0, 240, 255, 0.3);
-      padding: 4px 14px;
-      border-radius: 4px;
+      gap: 12px;
+      margin-bottom: 20px;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      padding: 8px 24px;
+      border-radius: 6px;
       transition: all 0.25s ease;
     }
     .cyber-task-bar:focus-within {
-      background: rgba(0, 240, 255, 0.12);
+      background: rgba(0, 240, 255, 0.16);
       border-color: var(--primary);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.5);
     }
     .cyber-task-prefix {
-      font-size: 11px;
+      font-size: clamp(12px, 1.4vw, 15px);
       color: var(--yellow);
       letter-spacing: 2px;
-      font-weight: 700;
+      font-weight: 800;
       white-space: nowrap;
+      text-shadow: 0 0 10px rgba(255, 230, 0, 0.5);
     }
     .cyber-task-input {
       background: transparent;
@@ -160,16 +161,18 @@
       outline: none;
       color: #fff;
       font-family: 'Consolas', 'Courier New', monospace;
-      font-size: clamp(12px, 1.5vw, 15px);
-      letter-spacing: 1px;
-      font-weight: 700;
+      font-size: clamp(18px, 2.4vw, 28px);
+      letter-spacing: 2px;
+      font-weight: 800;
       text-align: center;
-      min-width: 180px;
-      max-width: 320px;
+      min-width: 240px;
+      max-width: 500px;
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
     }
     .cyber-task-input::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.4);
       font-weight: normal;
+      font-size: clamp(14px, 1.8vw, 20px);
     }
 
     /* 数字显示 */

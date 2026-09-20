@@ -551,41 +551,44 @@
     .wall-task-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 10px;
-      background: rgba(14, 18, 26, 0.75);
-      border: 1px solid rgba(212, 175, 55, 0.35);
-      border-radius: 20px;
-      padding: 5px 16px;
-      backdrop-filter: blur(10px);
+      gap: 12px;
+      margin-bottom: 14px;
+      background: rgba(14, 18, 26, 0.82);
+      border: 1.5px solid rgba(212, 175, 55, 0.45);
+      border-radius: 28px;
+      padding: 7px 22px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), 0 0 15px rgba(212, 175, 55, 0.2);
       transition: all 0.25s ease;
       z-index: 15;
     }
     .wall-task-bar:focus-within {
-      background: rgba(14, 18, 26, 0.95);
+      background: rgba(14, 18, 26, 0.96);
       border-color: var(--gold);
-      box-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
+      box-shadow: 0 4px 22px rgba(0, 0, 0, 0.7), 0 0 25px rgba(212, 175, 55, 0.5);
     }
     .wall-task-icon {
-      font-size: 14px;
-      opacity: 0.85;
+      font-size: 18px;
+      opacity: 0.9;
     }
     .wall-task-input {
       background: transparent;
       border: none;
       outline: none;
       color: #fff;
-      font-size: clamp(13px, 1.6vw, 15px);
-      font-weight: 600;
+      font-size: clamp(17px, 2.2vw, 26px);
+      font-weight: 700;
       text-align: center;
-      min-width: 180px;
-      max-width: 320px;
-      letter-spacing: 1px;
+      min-width: 220px;
+      max-width: 480px;
+      letter-spacing: 1.5px;
       font-family: inherit;
+      text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
     }
     .wall-task-input::placeholder {
-      color: rgba(255, 255, 255, 0.4);
+      color: rgba(255, 255, 255, 0.45);
       font-weight: normal;
+      font-size: clamp(14px, 1.8vw, 20px);
     }
   </style>
 </head>

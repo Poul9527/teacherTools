@@ -378,45 +378,49 @@
     .bomb-task-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
-      background: rgba(30, 34, 42, 0.85);
-      border: 1px solid rgba(255, 30, 39, 0.4);
-      box-shadow: 0 0 15px rgba(255, 30, 39, 0.15);
-      border-radius: 6px;
-      padding: 5px 16px;
-      backdrop-filter: blur(8px);
+      gap: 12px;
+      margin-bottom: 20px;
+      background: rgba(30, 34, 42, 0.9);
+      border: 1.5px solid rgba(255, 30, 39, 0.45);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 30, 39, 0.2);
+      border-radius: 8px;
+      padding: 8px 24px;
+      backdrop-filter: blur(10px);
       transition: all 0.25s ease;
       z-index: 20;
     }
     .bomb-task-bar:focus-within {
       border-color: var(--led-red);
-      box-shadow: 0 0 20px rgba(255, 30, 39, 0.35);
+      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 30, 39, 0.45);
       background: rgba(30, 34, 42, 0.98);
     }
     .bomb-task-tag {
-      font-size: 11px;
+      font-size: clamp(12px, 1.4vw, 15px);
       color: var(--led-red);
       letter-spacing: 2px;
-      font-weight: bold;
+      font-weight: 800;
       font-family: 'Consolas', monospace;
+      white-space: nowrap;
+      text-shadow: 0 0 10px rgba(255, 30, 39, 0.6);
     }
     .bomb-task-input {
       background: transparent;
       border: none;
       outline: none;
       color: #fff;
-      font-size: clamp(12px, 1.5vw, 15px);
+      font-size: clamp(18px, 2.4vw, 28px);
       font-family: 'Consolas', 'Courier New', monospace;
-      font-weight: bold;
-      letter-spacing: 1px;
+      font-weight: 800;
+      letter-spacing: 2px;
       text-align: center;
-      min-width: 180px;
-      max-width: 320px;
+      min-width: 240px;
+      max-width: 500px;
+      text-shadow: 0 0 12px rgba(255, 30, 39, 0.5);
     }
     .bomb-task-input::placeholder {
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255, 255, 255, 0.4);
       font-weight: normal;
+      font-size: clamp(14px, 1.8vw, 20px);
     }
   </style>
 </head>

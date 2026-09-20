@@ -361,25 +361,27 @@
     .space-task-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      background: rgba(0, 210, 255, 0.08);
-      border: 1px solid rgba(0, 210, 255, 0.3);
-      padding: 4px 14px;
-      border-radius: 4px;
+      gap: 12px;
+      margin-bottom: 16px;
+      background: rgba(0, 210, 255, 0.1);
+      border: 1.5px solid rgba(0, 210, 255, 0.4);
+      padding: 8px 24px;
+      border-radius: 6px;
       transition: all 0.25s ease;
     }
     .space-task-bar:focus-within {
       border-color: var(--orange);
-      box-shadow: 0 0 16px rgba(255, 119, 0, 0.4);
-      background: rgba(0, 210, 255, 0.14);
+      box-shadow: 0 0 25px rgba(255, 119, 0, 0.5);
+      background: rgba(0, 210, 255, 0.18);
     }
     .space-task-tag {
-      font-size: 11px;
+      font-size: clamp(12px, 1.4vw, 15px);
       color: var(--orange);
       letter-spacing: 2px;
-      font-weight: bold;
+      font-weight: 800;
       font-family: 'Consolas', monospace;
+      white-space: nowrap;
+      text-shadow: 0 0 10px rgba(255, 119, 0, 0.6);
     }
     .space-task-input {
       background: transparent;
@@ -387,16 +389,18 @@
       outline: none;
       color: #fff;
       font-family: 'Consolas', monospace;
-      font-size: clamp(12px, 1.5vw, 15px);
-      font-weight: bold;
-      letter-spacing: 1px;
+      font-size: clamp(18px, 2.4vw, 28px);
+      font-weight: 800;
+      letter-spacing: 2px;
       text-align: center;
-      min-width: 180px;
-      max-width: 320px;
+      min-width: 240px;
+      max-width: 500px;
+      text-shadow: 0 0 12px rgba(0, 210, 255, 0.5);
     }
     .space-task-input::placeholder {
-      color: rgba(255, 255, 255, 0.35);
+      color: rgba(255, 255, 255, 0.4);
       font-weight: normal;
+      font-size: clamp(14px, 1.8vw, 20px);
     }
   </style>
 </head>
