@@ -1685,24 +1685,16 @@ body {
   cursor: grab;
 }
 
-/* 老师视角与坐标样式 */
-.seating-chart-paper.perspective-teacher {
-  flex-direction: column-reverse;
-}
-
+/* 老师视角与讲台倒转样式 */
 .seating-chart-paper.perspective-teacher .podium-section {
   margin-bottom: 0;
   margin-top: 24px;
+  flex-direction: column-reverse; /* 讲台靠近座位(前排)，黑板在最外侧墙面 */
 }
 
-.seating-chart-paper.perspective-teacher .direction-indicator.left {
-  left: auto;
-  right: 10px;
-}
-
-.seating-chart-paper.perspective-teacher .direction-indicator.right {
-  right: auto;
-  left: 10px;
+.seating-chart-paper.perspective-teacher .podium-section .blackboard-box {
+  margin-bottom: 0;
+  margin-top: 12px;
 }
 
 /* 额外信息胶囊 (名次/身高/视力) */

@@ -91,13 +91,15 @@ const ExportUtils = (function() {
     ctx.textAlign = 'center';
     ctx.fillText(title, rect.width / 2, 40);
 
-    // 绘制黑板与讲台
+    // 绘制黑板与讲台 (根据视角动态计算位置)
+    const isTeacher = containerEl.classList.contains('perspective-teacher');
+    const podiumY = isTeacher ? Math.max(rect.height - 50, 460) : 60;
     ctx.fillStyle = '#1e3a2b';
-    ctx.roundRect ? ctx.roundRect(rect.width / 2 - 120, 60, 240, 36, 6) : ctx.fillRect(rect.width / 2 - 120, 60, 240, 36);
+    ctx.roundRect ? ctx.roundRect(rect.width / 2 - 120, podiumY, 240, 36, 6) : ctx.fillRect(rect.width / 2 - 120, podiumY, 240, 36);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 15px sans-serif';
-    ctx.fillText('【 黑 板 / 讲 台 】', rect.width / 2, 84);
+    ctx.fillText('【 黑 板 / 讲 台 】', rect.width / 2, podiumY + 24);
 
     // 扫描所有座位卡片进行绘制
     const seatCards = containerEl.querySelectorAll('.seat-card');
@@ -149,25 +151,27 @@ const ExportUtils = (function() {
 
   /**
    * 2. 导出为 Excel (.xlsx) 表格
-   * 采用标准的 SheetJS 纯前端生成，带走道空列和大标题
+   * 采用标准的 SheetJS 纯前端生成，带走道空列和大标题，支持老师/学生双视角
    */
-  function exportToExcel(groups, title = '班级座位表') {
+  function exportToExcel(groups, title = '班级座位表', options = {}) {
+    const isTeacher = !!(options && options.isTeacher);
     if (typeof XLSX === 'undefined') {
       alert('未检测到 Excel 导出库组件，将自动为您导出纯文本 TXT！');
-      return exportToTxt(groups, title);
+      return exportToTxt(groups, title, options);
     }
 
-    const filename = `${title}_${getFormattedTimestamp()}.xlsx`;
+    const filename = `${title}_${isTeacher ? '老师视角_' : ''}${getFormattedTimestamp()}.xlsx`;
     const maxRows = Math.max(...groups.map(g => g.rows));
+    const exportGroups = isTeacher ? groups.slice().reverse() : groups;
 
     // 构建二维数组 aoa (Array of Arrays)
     const aoa = [];
 
     // 计算总列数（包括大组内部列和走廊空列）
     let totalTableCols = 1; // 第1列为排号 "第X排"
-    groups.forEach((g, idx) => {
+    exportGroups.forEach((g, idx) => {
       totalTableCols += g.colCount;
-      if (idx < groups.length - 1) {
+      if (idx < exportGroups.length - 1) {
         totalTableCols += 1; // 走廊空列
       }
     });
@@ -176,62 +180,85 @@ const ExportUtils = (function() {
     const merges = [];
 
     // 第1行：大标题合并所有列
-    const rowTitle = [title];
+    const displayTitle = isTeacher ? `${title} (老师视角)` : title;
+    const rowTitle = [displayTitle];
     for (let i = 1; i < totalTableCols; i++) rowTitle.push('');
     aoa.push(rowTitle);
     merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: totalTableCols - 1 } });
 
-    // 第2行：讲台标示合并所有列
-    const rowPodium = ['【 讲 台 / 黑 板 】'];
-    for (let i = 1; i < totalTableCols; i++) rowPodium.push('');
-    aoa.push(rowPodium);
-    merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: totalTableCols - 1 } });
+    // 学生视角：讲台在上方
+    if (!isTeacher) {
+      const rowPodium = ['【 讲 台 / 黑 板 】'];
+      for (let i = 1; i < totalTableCols; i++) rowPodium.push('');
+      aoa.push(rowPodium);
+      merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: totalTableCols - 1 } });
 
-    // 第3行：空行缓冲
-    aoa.push(new Array(totalTableCols).fill(''));
+      // 空行缓冲
+      aoa.push(new Array(totalTableCols).fill(''));
+    }
 
-    // 第4行：组名称表头
+    // 组名称表头
+    const groupHeaderRowIdx = aoa.length;
     const rowGroupNames = ['排次'];
     let currentColIdx = 1;
-    groups.forEach((g, gIdx) => {
-      rowGroupNames.push(g.groupName || `第 ${gIdx + 1} 组`);
+    exportGroups.forEach((g, gIdx) => {
+      rowGroupNames.push(g.groupName || `第 ${(g.groupIndex !== undefined ? g.groupIndex : gIdx) + 1} 组`);
       const startCol = currentColIdx;
       for (let c = 1; c < g.colCount; c++) {
         rowGroupNames.push('');
       }
       const endCol = startCol + g.colCount - 1;
       if (endCol > startCol) {
-        merges.push({ s: { r: 3, c: startCol }, e: { r: 3, c: endCol } });
+        merges.push({ s: { r: groupHeaderRowIdx, c: startCol }, e: { r: groupHeaderRowIdx, c: endCol } });
       }
       currentColIdx += g.colCount;
 
-      if (gIdx < groups.length - 1) {
+      if (gIdx < exportGroups.length - 1) {
         rowGroupNames.push('[走道]');
         currentColIdx += 1;
       }
     });
     aoa.push(rowGroupNames);
 
-    // 第5行开始：按排输出座位学生 (纯名字，绝不带性别)
-    for (let r = 1; r <= maxRows; r++) {
+    // 按排输出座位学生 (纯名字，绝不带性别)
+    // 老师视角：排次倒转(后排在上，前排在下)，组内左右列倒转；学生视角：前排在上后排在下
+    const rowNumbers = isTeacher
+      ? Array.from({ length: maxRows }, (_, i) => maxRows - i)
+      : Array.from({ length: maxRows }, (_, i) => i + 1);
+
+    rowNumbers.forEach(r => {
       const rowData = [`第 ${r} 排`];
-      groups.forEach((g, gIdx) => {
-        for (let c = 0; c < g.colCount; c++) {
+      exportGroups.forEach((g, gIdx) => {
+        const colsToIterate = isTeacher
+          ? Array.from({ length: g.colCount }, (_, i) => g.colCount - 1 - i)
+          : Array.from({ length: g.colCount }, (_, i) => i);
+
+        colsToIterate.forEach(c => {
           const seat = g.seats.find(s => s.row === r && s.colInGroup === c);
           if (seat && seat.student && seat.student.name) {
             rowData.push(seat.student.name); // 纯名字
           } else {
             rowData.push(''); // 空座
           }
-        }
-        if (gIdx < groups.length - 1) {
+        });
+        if (gIdx < exportGroups.length - 1) {
           rowData.push(''); // 走道列留空
         }
       });
       aoa.push(rowData);
+    });
+
+    // 老师视角：讲台在下方
+    if (isTeacher) {
+      aoa.push(new Array(totalTableCols).fill(''));
+      const podiumRowIdx = aoa.length;
+      const rowPodium = ['【 讲 台 / 黑 板 】'];
+      for (let i = 1; i < totalTableCols; i++) rowPodium.push('');
+      aoa.push(rowPodium);
+      merges.push({ s: { r: podiumRowIdx, c: 0 }, e: { r: podiumRowIdx, c: totalTableCols - 1 } });
     }
 
-    // 底部附加信息 (去掉编制工具字样)
+    // 底部附加信息
     aoa.push(new Array(totalTableCols).fill(''));
     aoa.push([`导出时间: ${new Date().toLocaleString()}`]);
 
@@ -243,11 +270,11 @@ const ExportUtils = (function() {
 
     // 设置列宽
     const colWidths = [{ wch: 10 }]; // 排次列
-    groups.forEach((g, gIdx) => {
+    exportGroups.forEach((g, gIdx) => {
       for (let c = 0; c < g.colCount; c++) {
         colWidths.push({ wch: 14 });
       }
-      if (gIdx < groups.length - 1) {
+      if (gIdx < exportGroups.length - 1) {
         colWidths.push({ wch: 6 }); // 走道较窄
       }
     });
@@ -263,37 +290,56 @@ const ExportUtils = (function() {
   /**
    * 3. 导出为 TXT 纯文本
    */
-  function generateTxtContent(groups, title = '班级座位表') {
+  function generateTxtContent(groups, title = '班级座位表', options = {}) {
+    const isTeacher = !!(options && options.isTeacher);
     const maxRows = Math.max(...groups.map(g => g.rows));
+    const exportGroups = isTeacher ? groups.slice().reverse() : groups;
+
     let content = '';
     content += `===========================================================\n`;
-    content += `                   ${title}\n`;
+    content += `                   ${title}${isTeacher ? ' (老师视角)' : ''}\n`;
     content += `           导出时间: ${new Date().toLocaleString()}\n`;
     content += `===========================================================\n\n`;
-    content += `                      【 讲 台 / 黑 板 】\n\n`;
+
+    if (!isTeacher) {
+      content += `                      【 讲 台 / 黑 板 】\n\n`;
+    }
 
     // 组标题行
     let groupHeader = '         ';
-    groups.forEach((g, gIdx) => {
-      const gName = (g.groupName || `第${gIdx + 1}组`).padEnd(14, ' ');
+    exportGroups.forEach((g, gIdx) => {
+      const gName = (g.groupName || `第${(g.groupIndex !== undefined ? g.groupIndex : gIdx) + 1}组`).padEnd(14, ' ');
       groupHeader += gName + '   |   ';
     });
     content += groupHeader + '\n';
     content += '-'.repeat(70) + '\n';
 
     // 排行数据
-    for (let r = 1; r <= maxRows; r++) {
+    const rowNumbers = isTeacher
+      ? Array.from({ length: maxRows }, (_, i) => maxRows - i)
+      : Array.from({ length: maxRows }, (_, i) => i + 1);
+
+    rowNumbers.forEach(r => {
       let line = `[第${r}排]  `;
-      groups.forEach((g, gIdx) => {
+      exportGroups.forEach((g, gIdx) => {
         let groupStudents = [];
-        for (let c = 0; c < g.colCount; c++) {
+        const colsToIterate = isTeacher
+          ? Array.from({ length: g.colCount }, (_, i) => g.colCount - 1 - i)
+          : Array.from({ length: g.colCount }, (_, i) => i);
+
+        colsToIterate.forEach(c => {
           const seat = g.seats.find(s => s.row === r && s.colInGroup === c);
           const name = (seat && seat.student && seat.student.name) ? seat.student.name : '____';
           groupStudents.push(name.padEnd(5, ' '));
-        }
+        });
         line += groupStudents.join(' ') + '   |   ';
       });
       content += line + '\n';
+    });
+
+    if (isTeacher) {
+      content += '\n' + '-'.repeat(70) + '\n';
+      content += `                      【 讲 台 / 黑 板 】\n`;
     }
 
     content += '\n' + '='.repeat(70) + '\n';
@@ -304,10 +350,11 @@ const ExportUtils = (function() {
   /**
    * 下载 TXT 文件
    */
-  function exportToTxt(groups, title = '班级座位表') {
-    const text = generateTxtContent(groups, title);
+  function exportToTxt(groups, title = '班级座位表', options = {}) {
+    const text = generateTxtContent(groups, title, options);
+    const isTeacher = !!(options && options.isTeacher);
     const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const filename = `${title}_${getFormattedTimestamp()}.txt`;
+    const filename = `${title}_${isTeacher ? '老师视角_' : ''}${getFormattedTimestamp()}.txt`;
     downloadBlob(blob, filename);
     return true;
   }
@@ -315,8 +362,8 @@ const ExportUtils = (function() {
   /**
    * 复制纯文本到剪贴板
    */
-  async function copyTxtToClipboard(groups, title = '班级座位表') {
-    const text = generateTxtContent(groups, title);
+  async function copyTxtToClipboard(groups, title = '班级座位表', options = {}) {
+    const text = generateTxtContent(groups, title, options);
     try {
       await navigator.clipboard.writeText(text);
       return true;

@@ -167,6 +167,8 @@
       classTitleInput: document.getElementById('classTitleInput'),
       chartTitleInput: document.getElementById('chartTitleInput'),
       chartSubtitleDate: document.getElementById('chartSubtitleDate'),
+      chartHeaderInfo: document.getElementById('chartHeaderInfo'),
+      podiumSection: document.getElementById('podiumSection'),
       capacityStats: document.getElementById('capacityStats'),
       seatingContainer: document.getElementById('seatingContainer'),
       seatingPaper: document.getElementById('seatingPaper'),
@@ -749,12 +751,16 @@
     });
 
     document.getElementById('btnExportExcel').addEventListener('click', () => {
-      ExportUtils.exportToExcel(state.groups, state.chartTitle);
+      ExportUtils.exportToExcel(state.groups, state.chartTitle, {
+        isTeacher: state.displaySettings.viewPerspective === 'teacher'
+      });
       showToast('座位表 Excel 文件已导出！');
     });
 
     document.getElementById('btnCopyTxt').addEventListener('click', async () => {
-      await ExportUtils.copyTxtToClipboard(state.groups, state.chartTitle);
+      await ExportUtils.copyTxtToClipboard(state.groups, state.chartTitle, {
+        isTeacher: state.displaySettings.viewPerspective === 'teacher'
+      });
       showToast('座位表纯文本已复制到剪贴板！');
     });
 
@@ -1323,15 +1329,29 @@
     const isTeacher = state.displaySettings.viewPerspective === 'teacher';
     els.chartSubtitleDate.textContent = `编制日期: ${now.toLocaleDateString()} | ${presetLabel} (${isTeacher ? '老师视角' : '学生视角'})`;
 
-    // 老师视角切换样式
+    // 老师视角 / 学生视角 DOM 结构装配与方向指示
     if (isTeacher) {
       els.seatingPaper.classList.add('perspective-teacher');
       els.dirLeft.textContent = '🚪 靠门 (过道)';
       els.dirRight.textContent = '🪟 靠窗 (走廊)';
+
+      // 老师视角排布：顶部标题 -> 座位区(后排在上，前排在下) -> 底部讲台黑板(讲台在上，黑板在下)
+      if (els.chartHeaderInfo && els.podiumSection && els.seatingContainer) {
+        els.seatingPaper.appendChild(els.chartHeaderInfo);
+        els.seatingPaper.appendChild(els.seatingContainer);
+        els.seatingPaper.appendChild(els.podiumSection);
+      }
     } else {
       els.seatingPaper.classList.remove('perspective-teacher');
       els.dirLeft.textContent = '🪟 靠窗 (走廊)';
       els.dirRight.textContent = '🚪 靠门 (过道)';
+
+      // 学生视角排布：顶部标题 -> 顶部黑板讲台 -> 座位区(前排在上，后排在下)
+      if (els.chartHeaderInfo && els.podiumSection && els.seatingContainer) {
+        els.seatingPaper.appendChild(els.chartHeaderInfo);
+        els.seatingPaper.appendChild(els.podiumSection);
+        els.seatingPaper.appendChild(els.seatingContainer);
+      }
     }
 
     els.seatingContainer.innerHTML = '';
@@ -1356,40 +1376,81 @@
       const rulerGrid = document.createElement('div');
       rulerGrid.className = 'row-ruler-grid';
 
-      for (let r = 1; r <= maxRows; r++) {
-        const badge = document.createElement('div');
-        badge.className = 'row-ruler-badge';
-        badge.textContent = getChineseRowName(r);
-        rulerGrid.appendChild(badge);
+      if (isTeacher) {
+        // 老师视角：讲台在下，靠讲台处(底部)为第1排，最上方为最后一排
+        for (let r = maxRows; r >= 1; r--) {
+          const badge = document.createElement('div');
+          badge.className = 'row-ruler-badge';
+          badge.textContent = getChineseRowName(r);
+          rulerGrid.appendChild(badge);
+        }
+      } else {
+        // 学生视角：黑板讲台在上，最靠近黑板(顶部)为第1排
+        for (let r = 1; r <= maxRows; r++) {
+          const badge = document.createElement('div');
+          badge.className = 'row-ruler-badge';
+          badge.textContent = getChineseRowName(r);
+          rulerGrid.appendChild(badge);
+        }
       }
 
       rulerCol.appendChild(rulerGrid);
       els.seatingContainer.appendChild(rulerCol);
     }
 
-    state.groups.forEach((group, gIdx) => {
+    // 老师站在讲台看学生时，左右与前后均呈 180 度翻转 (真实物理视角)：
+    // 学生视角：左边为第1组，右边为最后1组；老师视角：左边为最后1组，右边为第1组
+    const groupsToRender = isTeacher ? state.groups.slice().reverse() : state.groups;
+
+    groupsToRender.forEach((group, renderIdx) => {
       const groupEl = document.createElement('div');
       groupEl.className = 'seat-group';
 
       const headerEl = document.createElement('div');
       headerEl.className = 'group-header';
-      headerEl.textContent = group.groupName || `第 ${gIdx + 1} 组`;
+      headerEl.textContent = group.groupName || `第 ${(group.groupIndex !== undefined ? group.groupIndex : renderIdx) + 1} 组`;
       groupEl.appendChild(headerEl);
 
       const gridEl = document.createElement('div');
       gridEl.className = 'group-seats-grid';
       gridEl.style.gridTemplateColumns = `repeat(${group.colCount}, 96px)`;
 
+      const groupRows = group.rows || maxRows;
+      const groupCols = group.colCount;
+
+      // 确定排(前后)与组内列(左右)的渲染次序
+      const rowsToRender = isTeacher
+        ? Array.from({ length: groupRows }, (_, i) => groupRows - i)      // [groupRows, ..., 1]
+        : Array.from({ length: groupRows }, (_, i) => i + 1);             // [1, ..., groupRows]
+
+      const colsToRender = isTeacher
+        ? Array.from({ length: groupCols }, (_, i) => groupCols - 1 - i)  // [groupCols-1, ..., 0]
+        : Array.from({ length: groupCols }, (_, i) => i);                 // [0, ..., groupCols-1]
+
+      const renderedSeatIds = new Set();
+      rowsToRender.forEach(r => {
+        colsToRender.forEach(c => {
+          const seat = group.seats.find(s => s.row === r && s.colInGroup === c);
+          if (seat) {
+            renderedSeatIds.add(seat.id);
+            const seatCard = createSeatCardElement(seat, group);
+            gridEl.appendChild(seatCard);
+          }
+        });
+      });
+
+      // 容错：追加未按标准 row/col 排列的其它卡片
       group.seats.forEach(seat => {
-        const seatCard = createSeatCardElement(seat, group);
-        gridEl.appendChild(seatCard);
+        if (!renderedSeatIds.has(seat.id)) {
+          gridEl.appendChild(createSeatCardElement(seat, group));
+        }
       });
 
       groupEl.appendChild(gridEl);
       els.seatingContainer.appendChild(groupEl);
 
       // 过道标示
-      if (showAisle && gIdx < state.groups.length - 1) {
+      if (showAisle && renderIdx < groupsToRender.length - 1) {
         const aisle = document.createElement('div');
         aisle.className = 'aisle-label';
         aisle.textContent = '过道';
@@ -2673,6 +2734,9 @@
         if (els.chkShowCoord) els.chkShowCoord.checked = state.displaySettings.showCoord !== false;
         if (els.chkShowAisle) els.chkShowAisle.checked = state.displaySettings.showAisle;
         if (els.chkShowTeam) els.chkShowTeam.checked = state.displaySettings.showTeam !== false;
+        if (els.perspectiveLabel) {
+          els.perspectiveLabel.textContent = (state.displaySettings.viewPerspective === 'teacher') ? '老师视角 (讲台在下)' : '学生视角 (看黑板)';
+        }
 
         parseStudentInput();
         updateStudentStats();
